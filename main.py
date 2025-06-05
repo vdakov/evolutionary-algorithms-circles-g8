@@ -59,8 +59,18 @@ class CirclesInASquare:
         self.output_statistics = output_statistics
         self.plot_best_sol = plot_sols
         self.n_circles = n_circles
+        self.best_total_score = []
         self.fig = None
         self.ax = None
+
+        plt.ion()
+        self.elbow_fig, self.elbow_ax = plt.subplots()
+        self.elbow_line, = self.elbow_ax.plot([], [], marker='o')
+        self.elbow_ax.set_title("Best encountered score in any generation")
+        self.elbow_ax.set_xlabel("Generation")
+        self.elbow_ax.set_ylabel("Best Score so Far")
+        self.elbow_ax.grid(True)
+
         assert 2 <= n_circles <= 20
 
         if self.plot_best_sol:
@@ -90,6 +100,23 @@ class CirclesInASquare:
             report.avg_fitness,
             report.std_fitness,
         )
+
+        if len(self.best_total_score) == 0:
+            self.best_total_score.append(report.best_fitness)
+        elif report.best_fitness <= self.best_total_score[-1]:
+            self.best_total_score.append(self.best_total_score[-1])
+        else:
+            self.best_total_score.append(report.best_fitness)
+
+        self.elbow_line.set_xdata(range(1, len(self.best_total_score) + 1))
+        self.elbow_line.set_ydata(self.best_total_score)
+
+        self.elbow_ax.relim()
+        self.elbow_ax.autoscale_view()
+
+        # Redraw the plot
+        self.elbow_fig.canvas.draw()
+        self.elbow_fig.canvas.flush_events()
 
         if self.print_sols:
             output += " ({:s})".format(np.array2string(report.best_genotype))
@@ -155,10 +182,13 @@ class CirclesInASquare:
         if self.plot_best_sol:
             plt.close()
 
+        plt.ioff()
+        plt.show()  # Keep the plot open at the end
+
         return best_solution
 
 
 if __name__ == "__main__":
-    circles = 10
-    runner = CirclesInASquare(circles, plot_sols=True)
+    circles = 2
+    runner = CirclesInASquare(circles, print_sols=True, plot_sols=True)
     best = runner.run_evolution_strategies()
