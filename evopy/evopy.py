@@ -7,6 +7,7 @@ import numpy as np
 from evopy.individual import Individual
 from evopy.progress_report import ProgressReport
 from evopy.strategy import Strategy
+from evopy.constraint_handling import run_random_repair
 from evopy.utils import random_with_seed
 
 
@@ -25,6 +26,7 @@ class EvoPy:
         std=1,
         maximize=False,
         strategy=Strategy.SINGLE_VARIANCE,
+        constraint_handling_func=run_random_repair,
         random_seed=None,
         reporter=None,
         target_fitness_value=None,
@@ -46,6 +48,7 @@ class EvoPy:
         :param maximize: whether the fitness function should be maximized or minimized
         :param strategy: the strategy used to generate offspring by individuals. For more
                          information, check the Strategy enum
+        :param constraint_handling_func: the strategy used to resolve invalid individuals
         :param random_seed: the seed to use for the random number generator
         :param reporter: callback to be invoked at each generation with a ProgressReport as argument
         :param target_fitness_value: target fitness value for early stopping
@@ -66,6 +69,7 @@ class EvoPy:
         self.std = std
         self.maximize = maximize
         self.strategy = strategy
+        self.constraint_handling_func = constraint_handling_func
         self.random_seed = random_seed
         self.random = random_with_seed(self.random_seed)
         self.reporter = reporter
@@ -189,6 +193,7 @@ class EvoPy:
                 # Set strategy parameters
                 self.strategy,
                 strategy_parameters,
+                self.constraint_handling_func,
                 # Set seed and bounds for reproduction
                 random_seed=self.random,
                 bounds=self.bounds,

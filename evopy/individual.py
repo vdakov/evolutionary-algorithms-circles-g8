@@ -22,7 +22,13 @@ class Individual:
     _EPSILON = 0.01
 
     def __init__(
-        self, genotype, strategy, strategy_parameters, bounds=None, random_seed=None
+        self,
+        genotype,
+        strategy,
+        strategy_parameters,
+        constraint_handling_func,
+        bounds=None,
+        random_seed=None,
     ):
         """Initialize the Individual.
 
@@ -40,6 +46,7 @@ class Individual:
         self.bounds = bounds
         self.strategy = strategy
         self.strategy_parameters = strategy_parameters
+        self.constraint_handling_func = constraint_handling_func
         if not isinstance(strategy, Strategy):
             raise ValueError(
                 "Provided strategy parameter was not an instance of Strategy."
@@ -79,11 +86,7 @@ class Individual:
         new_genotype = self.genotype + self.strategy_parameters[0] * self.random.randn(
             self.length
         )
-        # Randomly sample out of bounds indices
-        oob_indices = (new_genotype < self.bounds[0]) | (new_genotype > self.bounds[1])
-        new_genotype[oob_indices] = self.random.uniform(
-            self.bounds[0], self.bounds[1], size=np.count_nonzero(oob_indices)
-        )
+        new_genotype = self.constraint_handling_func(self, new_genotype)
         scale_factor = self.random.randn() * np.sqrt(1 / (2 * self.length))
         new_parameters = [
             max(self.strategy_parameters[0] * np.exp(scale_factor), self._EPSILON)
@@ -92,6 +95,7 @@ class Individual:
             new_genotype,
             self.strategy,
             new_parameters,
+            self.constraint_handling_func,
             bounds=self.bounds,
             random_seed=self.random,
         )
@@ -107,11 +111,7 @@ class Individual:
             self.strategy_parameters[i] * self.random.randn()
             for i in range(self.length)
         ]
-        # Randomly sample out of bounds indices
-        oob_indices = (new_genotype < self.bounds[0]) | (new_genotype > self.bounds[1])
-        new_genotype[oob_indices] = self.random.uniform(
-            self.bounds[0], self.bounds[1], size=np.count_nonzero(oob_indices)
-        )
+        new_genotype = self.constraint_handling_func(self, new_genotype)
         global_scale_factor = self.random.randn() * np.sqrt(1 / (2 * self.length))
         scale_factors = [
             self.random.randn() * np.sqrt(1 / 2 * np.sqrt(self.length))
@@ -126,7 +126,11 @@ class Individual:
             for i in range(self.length)
         ]
         return Individual(
-            new_genotype, self.strategy, new_parameters, bounds=self.bounds
+            new_genotype,
+            self.strategy,
+            new_parameters,
+            self.constraint_handling_func,
+            bounds=self.bounds,
         )
 
     # pylint: disable=invalid-name
@@ -173,14 +177,11 @@ class Individual:
                 T_pq[q][p] = -T_pq[p][q]
                 T = np.matmul(T, T_pq)
         new_genotype = self.genotype + T @ self.random.randn(self.length)
-        # Randomly sample out of bounds indices
-        oob_indices = (new_genotype < self.bounds[0]) | (new_genotype > self.bounds[1])
-        new_genotype[oob_indices] = self.random.uniform(
-            self.bounds[0], self.bounds[1], size=np.count_nonzero(oob_indices)
-        )
+        new_genotype = self.constraint_handling_func(self, new_genotype)
         return Individual(
             new_genotype,
             self.strategy,
             new_variances + new_rotations,
+            self.constraint_handling_func,
             bounds=self.bounds,
         )

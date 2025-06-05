@@ -10,6 +10,7 @@ from sklearn.metrics.pairwise import euclidean_distances
 import matplotlib.pyplot as plt
 import numpy as np
 from evopy.strategy import Strategy
+from evopy.constraint_handling import *
 
 ###########################################################
 #                                                         #
@@ -50,10 +51,18 @@ def parse_args():
     )
     parser.add_argument(
         "--strategy",
-        type=str,
+        type=Strategy.from_string,
         choices=["single", "multiple", "full"],
         default="single",
         help="Variance strategy (single/multiple/full)",
+    )
+    parser.add_argument(
+        "--constraint_handling",
+        type=ConstraintHandling.from_string,
+        choices=["BR", "CD", "RR"],
+        default="BR",
+        help="How to deal with out-of-bounds individuals: "
+        "Boundary Repair (BD), Constraint domination (CD), or Random repair (RR)",
     )
     # Visualization and output
     parser.add_argument(
@@ -212,6 +221,7 @@ class CirclesInASquare:
         num_children,
         generations,
         strategy,
+        constraint_handling_func,
         max_evaluations,
         max_run_time,
     ):
@@ -230,6 +240,7 @@ class CirclesInASquare:
             population_size=population_size,
             num_children=num_children,
             strategy=strategy,
+            constraint_handling_func=constraint_handling_func,
             bounds=(0, 1),
             target_fitness_value=self.get_target(),
             max_evaluations=max_evaluations,
@@ -250,21 +261,22 @@ class CirclesInASquare:
 if __name__ == "__main__":
     args = parse_args()
     # Map string strategy to Strategy enum
-    strategy_map = {
-        "single": Strategy.SINGLE_VARIANCE,
-        "multiple": Strategy.MULTIPLE_VARIANCE,
-        "full": Strategy.FULL_VARIANCE,
-    }
     runner = CirclesInASquare(
         n_circles=args.n_circles,
         print_sols=not args.skip_print_sols,
         plot_sols=not args.skip_plot_sols,
     )
+    constraint_func_dispatch = {
+        ConstraintHandling.BOUNDARY_REPAIR: run_boundary_repair,
+        ConstraintHandling.CONSTRAINT_DOMINATION: run_constraint_domination,
+        ConstraintHandling.RANDOM_REPAIR: run_random_repair,
+    }
     best = runner.run_evolution_strategies(
         population_size=args.population_size,
         num_children=args.num_children,
         generations=args.generations,
-        strategy=strategy_map[args.strategy],
+        strategy=args.strategy,
+        constraint_handling_func=constraint_func_dispatch[args.constraint_handling],
         max_evaluations=args.max_evals,
         max_run_time=args.max_time,
     )

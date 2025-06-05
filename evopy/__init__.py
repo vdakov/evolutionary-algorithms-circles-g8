@@ -3,3 +3,4 @@
 from evopy.evopy import EvoPy
 from evopy.strategy import Strategy
 from evopy.progress_report import ProgressReport
+from evopy.constraint_handling import *

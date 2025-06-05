@@ -1,5 +1,6 @@
 """Module containing enum Strategy describing different strategies available to the algorithm."""
 
+import argparse
 from enum import Enum
 
 
@@ -18,3 +19,15 @@ class Strategy(Enum):
     SINGLE_VARIANCE = 1
     MULTIPLE_VARIANCE = 2
     FULL_VARIANCE = 3
+
+    @staticmethod
+    def from_string(s: str):
+        match s:
+            case "single":
+                return Strategy.SINGLE_VARIANCE
+            case "multiple":
+                return Strategy.MULTIPLE_VARIANCE
+            case "full":
+                return Strategy.FULL_VARIANCE
+            case _:
+                argparse.ArgumentTypeError(f"Invalid strategy: {s}")
