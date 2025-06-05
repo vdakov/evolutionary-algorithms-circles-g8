@@ -4,7 +4,15 @@
 class ProgressReport:
     """Class representing a report on an intermediate state of the learning process."""
 
-    def __init__(self, generation, evaluations, best_genotype, best_fitness, avg_fitness, std_fitness):
+    def __init__(
+        self,
+        generation,
+        evaluations,
+        best_genotype,
+        best_fitness,
+        avg_fitness,
+        std_fitness,
+    ):
         """Initializes the report instance.
 
         :param generation: number identifying the reported generation

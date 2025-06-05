@@ -1,4 +1,5 @@
 """Module containing enum Strategy describing different strategies available to the algorithm."""
+
 from enum import Enum
 
 
@@ -13,6 +14,7 @@ class Strategy(Enum):
     - FULL VARIANCE: each allele has its own variance, complete variances
                      (encoded as rotation angles)
     """
+
     SINGLE_VARIANCE = 1
     MULTIPLE_VARIANCE = 2
     FULL_VARIANCE = 3

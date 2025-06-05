@@ -1,4 +1,5 @@
 """A utility module for random number generation."""
+
 import numpy as np
 
 
@@ -13,4 +14,6 @@ def random_with_seed(seed):
         return np.random.RandomState(seed)
     if isinstance(seed, np.random.RandomState):
         return seed
-    raise ValueError('Seed must either be an integer or an instance of numpy.random.RandomState')
+    raise ValueError(
+        "Seed must either be an integer or an instance of numpy.random.RandomState"
+    )

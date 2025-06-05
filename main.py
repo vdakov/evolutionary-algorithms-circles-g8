@@ -1,5 +1,6 @@
 import matplotlib
-matplotlib.use('Qt5Agg')
+
+matplotlib.use("Qt5Agg")
 
 import math
 from evopy import EvoPy
@@ -26,26 +27,34 @@ import numpy as np
 #                                                         #
 ###########################################################
 
+
 # np/scipy CiaS implementation is faster for higher problem dimensions, i.e, more than 11 or 12 circles.
 def circles_in_a_square_scipy(individual):
-   points = np.reshape(individual, (-1, 2))
-   dist = euclidean_distances(points)
-   np.fill_diagonal(dist, 1e10)
-   return np.min(dist)
+    points = np.reshape(individual, (-1, 2))
+    dist = euclidean_distances(points)
+    np.fill_diagonal(dist, 1e10)
+    return np.min(dist)
+
 
 # Pure python implementation is faster for lower problem dimensions
 def circles_in_a_square(individual):
     n = len(individual)
     distances = []
-    for i in range(0, n-1, 2):
+    for i in range(0, n - 1, 2):
         for j in range(i + 2, n, 2):
-            distances.append(math.sqrt(math.pow((individual[i] - individual[j]), 2)
-                              + math.pow((individual[i + 1] - individual[j + 1]), 2)))
+            distances.append(
+                math.sqrt(
+                    math.pow((individual[i] - individual[j]), 2)
+                    + math.pow((individual[i + 1] - individual[j + 1]), 2)
+                )
+            )
     return min(distances)
 
 
 class CirclesInASquare:
-    def __init__(self, n_circles, output_statistics=True, plot_sols=False, print_sols=False):
+    def __init__(
+        self, n_circles, output_statistics=True, plot_sols=False, print_sols=False
+    ):
         self.print_sols = print_sols
         self.output_statistics = output_statistics
         self.plot_best_sol = plot_sols
@@ -74,9 +83,13 @@ class CirclesInASquare:
             print("Generation Evaluations Best-fitness")
 
     def statistics_callback(self, report: ProgressReport):
-        output = "{:>10d} {:>11d} {:>12.8f} {:>12.8f} {:>12.8f}".format(report.generation, report.evaluations,
-                                                                        report.best_fitness, report.avg_fitness,
-                                                                        report.std_fitness)
+        output = "{:>10d} {:>11d} {:>12.8f} {:>12.8f} {:>12.8f}".format(
+            report.generation,
+            report.evaluations,
+            report.best_fitness,
+            report.avg_fitness,
+            report.std_fitness,
+        )
 
         if self.print_sols:
             output += " ({:s})".format(np.array2string(report.best_genotype))
@@ -88,7 +101,9 @@ class CirclesInASquare:
             self.ax.scatter(points[:, 0], points[:, 1], clip_on=False, color="black")
             self.ax.set_xlim((0, 1))
             self.ax.set_ylim((0, 1))
-            self.ax.set_title("Best solution in generation {:d}".format(report.generation))
+            self.ax.set_title(
+                "Best solution in generation {:d}".format(report.generation)
+            )
             self.fig.canvas.draw()
             self.fig.canvas.flush_events()
 
@@ -112,7 +127,7 @@ class CirclesInASquare:
             0.306153985300332915214516914060,
             0.300462606288665774426601772290,
             0.289541991994981660261698764510,
-            0.286611652351681559449894454738
+            0.286611652351681559449894454738,
         ]
 
         return values_to_reach[self.n_circles - 2]
@@ -121,7 +136,11 @@ class CirclesInASquare:
         callback = self.statistics_callback if self.output_statistics else None
 
         evopy = EvoPy(
-            circles_in_a_square if self.n_circles < 12 else circles_in_a_square_scipy,  # Fitness function
+            (
+                circles_in_a_square
+                if self.n_circles < 12
+                else circles_in_a_square_scipy
+            ),  # Fitness function
             self.n_circles * 2,  # Number of parameters
             reporter=callback,  # Prints statistics at each generation
             maximize=True,

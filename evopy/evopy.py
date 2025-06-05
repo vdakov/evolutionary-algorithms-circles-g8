@@ -1,4 +1,5 @@
 """Module used for the execution of the evolutionary algorithm."""
+
 import time
 
 import numpy as np
@@ -12,11 +13,26 @@ from evopy.utils import random_with_seed
 class EvoPy:
     """Main class of the EvoPy package."""
 
-    def __init__(self, fitness_function, individual_length, warm_start=None, generations=100,
-                 population_size=30, num_children=1, mean=0, std=1, maximize=False,
-                 strategy=Strategy.SINGLE_VARIANCE, random_seed=None, reporter=None,
-                 target_fitness_value=None, target_tolerance=1e-5, max_run_time=None,
-                 max_evaluations=None, bounds=None):
+    def __init__(
+        self,
+        fitness_function,
+        individual_length,
+        warm_start=None,
+        generations=100,
+        population_size=30,
+        num_children=1,
+        mean=0,
+        std=1,
+        maximize=False,
+        strategy=Strategy.SINGLE_VARIANCE,
+        random_seed=None,
+        reporter=None,
+        target_fitness_value=None,
+        target_tolerance=1e-5,
+        max_run_time=None,
+        max_evaluations=None,
+        bounds=None,
+    ):
         """Initializes an EvoPy instance.
 
         :param fitness_function: the fitness function on which the individuals are evaluated
@@ -40,7 +56,9 @@ class EvoPy:
         """
         self.fitness_function = fitness_function
         self.individual_length = individual_length
-        self.warm_start = np.zeros(self.individual_length) if warm_start is None else warm_start
+        self.warm_start = (
+            np.zeros(self.individual_length) if warm_start is None else warm_start
+        )
         self.generations = generations
         self.population_size = population_size
         self.num_children = num_children
@@ -65,13 +83,21 @@ class EvoPy:
         :param best: the current best individual
         :return: whether the algorithm should be terminated early
         """
-        return (self.max_run_time is not None
-                and (time.time() - start_time) > self.max_run_time) \
-               or \
-               (self.target_fitness_value is not None
-                and abs(best.fitness - self.target_fitness_value) < self.target_tolerance) \
-               or (self.max_evaluations is not None
-                and self.evaluations >= self.max_evaluations)
+        return (
+            (
+                self.max_run_time is not None
+                and (time.time() - start_time) > self.max_run_time
+            )
+            or (
+                self.target_fitness_value is not None
+                and abs(best.fitness - self.target_fitness_value)
+                < self.target_tolerance
+            )
+            or (
+                self.max_evaluations is not None
+                and self.evaluations >= self.max_evaluations
+            )
+        )
 
     def run(self):
         """Run the evolutionary strategy algorithm.
@@ -84,22 +110,40 @@ class EvoPy:
         start_time = time.time()
 
         population = self._init_population()
-        best = sorted(population, reverse=self.maximize,
-                      key=lambda individual: individual.evaluate(self.fitness_function))[0]
+        best = sorted(
+            population,
+            reverse=self.maximize,
+            key=lambda individual: individual.evaluate(self.fitness_function),
+        )[0]
 
         for generation in range(self.generations):
-            children = [parent.reproduce() for _ in range(self.num_children)
-                        for parent in population]
-            population = sorted(children, reverse=self.maximize,
-                                key=lambda individual: individual.evaluate(self.fitness_function))
+            children = [
+                parent.reproduce()
+                for _ in range(self.num_children)
+                for parent in population
+            ]
+            population = sorted(
+                children,
+                reverse=self.maximize,
+                key=lambda individual: individual.evaluate(self.fitness_function),
+            )
             self.evaluations += len(population)
-            population = population[:self.population_size]
+            population = population[: self.population_size]
             best = population[0]
 
             if self.reporter is not None:
                 mean = np.mean([x.fitness for x in population])
                 std = np.std([x.fitness for x in population])
-                self.reporter(ProgressReport(generation, self.evaluations, best.genotype, best.fitness, mean, std))
+                self.reporter(
+                    ProgressReport(
+                        generation,
+                        self.evaluations,
+                        best.genotype,
+                        best.fitness,
+                        mean,
+                        std,
+                    )
+                )
 
             if self._check_early_stop(start_time, best):
                 break
@@ -113,27 +157,41 @@ class EvoPy:
             strategy_parameters = self.random.randn(self.individual_length)
         elif self.strategy == Strategy.FULL_VARIANCE:
             strategy_parameters = self.random.randn(
-                int((self.individual_length + 1) * self.individual_length / 2))
+                int((self.individual_length + 1) * self.individual_length / 2)
+            )
         else:
-            raise ValueError("Provided strategy parameter was not an instance of Strategy")
-        population_parameters = np.asarray([
-            self.warm_start + self.random.normal(loc=self.mean, scale=self.std, size=self.individual_length)
-            for _ in range(self.population_size)
-        ])
+            raise ValueError(
+                "Provided strategy parameter was not an instance of Strategy"
+            )
+        population_parameters = np.asarray(
+            [
+                self.warm_start
+                + self.random.normal(
+                    loc=self.mean, scale=self.std, size=self.individual_length
+                )
+                for _ in range(self.population_size)
+            ]
+        )
 
         # Make sure parameters are within bounds
         if self.bounds is not None:
-            oob_indices = (population_parameters < self.bounds[0]) | (population_parameters > self.bounds[1])
-            population_parameters[oob_indices] = self.random.uniform(self.bounds[0], self.bounds[1], size=np.count_nonzero(oob_indices))
+            oob_indices = (population_parameters < self.bounds[0]) | (
+                population_parameters > self.bounds[1]
+            )
+            population_parameters[oob_indices] = self.random.uniform(
+                self.bounds[0], self.bounds[1], size=np.count_nonzero(oob_indices)
+            )
 
         return [
             Individual(
                 # Initialize genotype within possible bounds
                 parameters,
                 # Set strategy parameters
-                self.strategy, strategy_parameters,
+                self.strategy,
+                strategy_parameters,
                 # Set seed and bounds for reproduction
                 random_seed=self.random,
-                bounds=self.bounds
-            ) for parameters in population_parameters
+                bounds=self.bounds,
+            )
+            for parameters in population_parameters
         ]
