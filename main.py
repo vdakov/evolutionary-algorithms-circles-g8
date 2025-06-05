@@ -3,11 +3,13 @@ import matplotlib
 matplotlib.use("Qt5Agg")
 
 import math
+import argparse
 from evopy import EvoPy
 from evopy import ProgressReport
 from sklearn.metrics.pairwise import euclidean_distances
 import matplotlib.pyplot as plt
 import numpy as np
+from evopy.strategy import Strategy
 
 ###########################################################
 #                                                         #
@@ -26,6 +28,52 @@ import numpy as np
 #       pip install -r requirements.dev.txt               #
 #                                                         #
 ###########################################################
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Circles in a Square (CiaS) Evolutionary Algorithm"
+    )
+    # Problem configuration
+    parser.add_argument(
+        "--n_circles", type=int, default=10, help="Number of circles to pack"
+    )
+    # Evolution Strategy parameters
+    parser.add_argument(
+        "--population_size", type=int, default=30, help="Population size"
+    )
+    parser.add_argument(
+        "--num_children", type=int, default=1, help="Number of children per parent"
+    )
+    parser.add_argument(
+        "--generations", type=int, default=1000, help="Maximum number of generations"
+    )
+    parser.add_argument(
+        "--strategy",
+        type=str,
+        choices=["single", "multiple", "full"],
+        default="single",
+        help="Variance strategy (single/multiple/full)",
+    )
+    # Visualization and output
+    parser.add_argument(
+        "--skip_plot_sols", action="store_true", help="Plot solutions during evolution"
+    )
+    parser.add_argument(
+        "--skip_print_sols",
+        action="store_true",
+        help="Print solutions during evolution",
+    )
+    # Early stopping criteria
+    parser.add_argument(
+        "--max_evals", type=int, default=1e5, help="Maximum number of evaluations"
+    )
+    parser.add_argument("--max_time", type=float, help="Maximum runtime in seconds")
+    # Parse and verify
+    args = parser.parse_args()
+    if not 2 <= args.n_circles:
+        parser.error("Number of circles must be at least 20")
+    return args
 
 
 # np/scipy CiaS implementation is faster for higher problem dimensions, i.e, more than 11 or 12 circles.
@@ -65,7 +113,7 @@ class CirclesInASquare:
 
         plt.ion()
         self.elbow_fig, self.elbow_ax = plt.subplots()
-        self.elbow_line, = self.elbow_ax.plot([], [], marker='o')
+        (self.elbow_line,) = self.elbow_ax.plot([], [], marker="o")
         self.elbow_ax.set_title("Best encountered score in any generation")
         self.elbow_ax.set_xlabel("Generation")
         self.elbow_ax.set_ylabel("Best Score so Far")
@@ -159,7 +207,15 @@ class CirclesInASquare:
 
         return values_to_reach[self.n_circles - 2]
 
-    def run_evolution_strategies(self):
+    def run_evolution_strategies(
+        self,
+        population_size,
+        num_children,
+        generations,
+        strategy,
+        max_evaluations,
+        max_run_time,
+    ):
         callback = self.statistics_callback if self.output_statistics else None
 
         evopy = EvoPy(
@@ -171,10 +227,14 @@ class CirclesInASquare:
             self.n_circles * 2,  # Number of parameters
             reporter=callback,  # Prints statistics at each generation
             maximize=True,
-            generations=1000,
+            generations=generations,
+            population_size=population_size,
+            num_children=num_children,
+            strategy=strategy,
             bounds=(0, 1),
             target_fitness_value=self.get_target(),
-            max_evaluations=1e5,
+            max_evaluations=max_evaluations,
+            max_run_time=max_run_time,
         )
 
         best_solution = evopy.run()
@@ -189,6 +249,23 @@ class CirclesInASquare:
 
 
 if __name__ == "__main__":
-    circles = 2
-    runner = CirclesInASquare(circles, print_sols=True, plot_sols=True)
-    best = runner.run_evolution_strategies()
+    args = parse_args()
+    # Map string strategy to Strategy enum
+    strategy_map = {
+        "single": Strategy.SINGLE_VARIANCE,
+        "multiple": Strategy.MULTIPLE_VARIANCE,
+        "full": Strategy.FULL_VARIANCE,
+    }
+    runner = CirclesInASquare(
+        n_circles=args.n_circles,
+        print_sols=not args.skip_print_sols,
+        plot_sols=not args.skip_plot_sols,
+    )
+    best = runner.run_evolution_strategies(
+        population_size=args.population_size,
+        num_children=args.num_children,
+        generations=args.generations,
+        strategy=strategy_map[args.strategy],
+        max_evaluations=args.max_evals,
+        max_run_time=args.max_time,
+    )

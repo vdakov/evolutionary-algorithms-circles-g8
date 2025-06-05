@@ -18,7 +18,7 @@ class EvoPy:
         fitness_function,
         individual_length,
         warm_start=None,
-        generations=100,
+        generations=1000,
         population_size=30,
         num_children=1,
         mean=0,
