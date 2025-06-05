@@ -59,35 +59,41 @@ class Individual:
 
         return self.fitness
 
-    def _reproduce_single_variance(self):
+    def _reproduce_single_variance(self, recombination_params=None, strategy=None):
         """Create a single offspring individual from the set genotype and strategy parameters.
 
         This function uses the single variance strategy.
 
         :return: an individual which is the offspring of the current instance
         """
+        if strategy:
+            self.recombination(self.genotype, self.strategy_parameters, recombination_params, strategy=strategy)
+        
         new_genotype = self.genotype + self.strategy_parameters[0] * self.random.randn(self.length)
         # Randomly sample out of bounds indices
         oob_indices = (new_genotype < self.bounds[0]) | (new_genotype > self.bounds[1])
-        # new_genotype[oob_indices] = self.random.uniform(self.bounds[0], self.bounds[1], size=np.count_nonzero(oob_indices))
-        new_genotype[oob_indices] = np.abs(np.clip(new_genotype[oob_indices], a_min=-1, a_max=1))
+        new_genotype[oob_indices] = self.random.uniform(self.bounds[0], self.bounds[1], size=np.count_nonzero(oob_indices))
+    
         scale_factor = self.random.randn() * np.sqrt(1 / (2 * self.length))
         new_parameters = [max(self.strategy_parameters[0] * np.exp(scale_factor), self._EPSILON)]
         return Individual(new_genotype, self.strategy, new_parameters, bounds=self.bounds, age=0, random_seed=self.random)
 
-    def _reproduce_multiple_variance(self):
+    def _reproduce_multiple_variance(self, recombination_params=None, strategy=None):
         """Create a single offspring individual from the set genotype and strategy.
 
         This function uses the multiple variance strategy.
 
         :return: an individual which is the offspring of the current instance
         """
+        if strategy:
+            self.recombination(self.genotype, self.strategy_parameters, recombination_params, strategy=strategy)
+            
         new_genotype = self.genotype + [self.strategy_parameters[i] * self.random.randn()
                                         for i in range(self.length)]
         # Randomly sample out of bounds indices
         oob_indices = (new_genotype < self.bounds[0]) | (new_genotype > self.bounds[1])
-        # new_genotype[oob_indices] = self.random.uniform(self.bounds[0], self.bounds[1], size=np.count_nonzero(oob_indices))
-        new_genotype[oob_indices] = np.abs(np.clip(new_genotype[oob_indices], a_min=-1, a_max=1))
+        new_genotype[oob_indices] = self.random.uniform(self.bounds[0], self.bounds[1], size=np.count_nonzero(oob_indices))
+    
         global_scale_factor = self.random.randn() * np.sqrt(1 / (2 * self.length))
         scale_factors = [self.random.randn() * np.sqrt(1 / 2 * np.sqrt(self.length))
                          for _ in range(self.length)]
@@ -97,7 +103,7 @@ class Individual:
         return Individual(new_genotype, self.strategy, new_parameters, age=0, bounds=self.bounds)
 
     # pylint: disable=invalid-name
-    def _reproduce_full_variance(self):
+    def _reproduce_full_variance(self, recombination_params=None, strategy=None):
         """Create a single offspring individual from the set genotype and strategy.
 
         This function uses the full variance strategy, as described in [1]. To emphasize this, the
@@ -105,6 +111,10 @@ class Individual:
 
         :return: an individual which is the offspring of the current instance
         """
+        
+
+            
+        
         global_scale_factor = self.random.randn() * np.sqrt(1 / (2 * self.length))
         scale_factors = [self.random.randn() * np.sqrt(1 / 2 * np.sqrt(self.length))
                          for _ in range(self.length)]
@@ -128,7 +138,74 @@ class Individual:
         new_genotype = self.genotype + T @ self.random.randn(self.length)
         # Randomly sample out of bounds indices
         oob_indices = (new_genotype < self.bounds[0]) | (new_genotype > self.bounds[1])
-        # new_genotype[oob_indices] = self.random.uniform(self.bounds[0], self.bounds[1], size=np.count_nonzero(oob_indices))
+        new_genotype[oob_indices] = self.random.uniform(self.bounds[0], self.bounds[1], size=np.count_nonzero(oob_indices))
         
-        new_genotype[oob_indices] = np.abs(np.clip(new_genotype[oob_indices], a_min=-1, a_max=1))
-        return Individual(new_genotype, self.strategy, new_variances + new_rotations, age=0, bounds=self.bounds)
+        if strategy:
+            self.recombination(self.genotype, self.strategy_parameters, recombination_params, strategy=strategy)
+        
+        return Individual(new_genotype, self.strategy, np.array(new_variances + new_rotations), age=0, bounds=self.bounds)
+    
+    
+    def recombination(self, x, strategy_parameters, recombination_params, strategy): 
+        if strategy == "weighted":
+            weights, population = recombination_params
+            # print(weights)
+            w_x = 0.4
+            w_r = 0.6
+            aggregate_x = np.zeros(x.shape)
+            aggregate_r = np.zeros(strategy_parameters.shape)
+            for i, individual in enumerate(population): 
+                aggregate_x += individual.genotype * weights[i]
+                aggregate_r += individual.strategy_parameters * weights[i]
+              
+            
+            x_new = (w_x ) * x + aggregate_x * w_r
+            strategy_parameters = (w_x) * strategy_parameters + aggregate_r * w_r
+            self.genotype = x_new
+            self.strategy_parameters = strategy_parameters
+        elif strategy == "intermediate":
+            weights, population = recombination_params
+            
+            if not population:
+                return # Nothing to recombine if no parents provided
+
+            num_parents = len(population)
+            
+            # Initialize sums for genotype and strategy parameters
+            sum_genotype = np.zeros(x.shape)
+            # sum_strategy_parameters = np.zeros(self.strategy_parameters.shape)
+            
+            # Sum up all parent contributions
+            for individual in population:
+                sum_genotype += individual.genotype
+                # sum_strategy_parameters += individual.strategy_parameters
+            
+            # Compute the average (centroid) and update self
+            self.genotype = sum_genotype / num_parents
+            # self.strategy_parameters = sum_strategy_parameters / num_parents
+        
+        else:
+            raise ValueError(f"Unknown recombination type: {strategy}")
+    
+            
+        
+    
+    
+    def copy(self):
+        """
+        Creates a deep copy of the Individual object.
+        """
+        # Ensure deep copies of mutable attributes like genotype and strategy_parameters
+        new_individual = Individual(
+            genotype=np.copy(self.genotype),
+            strategy=self.strategy,  # Enum or immutable, so direct assignment is fine
+            strategy_parameters=np.copy(self.strategy_parameters),  # Copy the strategy parameters
+            bounds=self.bounds,  # Tuple/immutable, so direct assignment is fine
+            age=self.age,
+            random_seed=self.random_seed
+        )
+        # Copy the cached fitness and age
+        new_individual.fitness = self.fitness
+        new_individual.age = self.age
+        return new_individual
+        

@@ -16,7 +16,7 @@ class EvoPy:
                  population_size=30, num_children=1, mean=0, std=1, maximize=False,
                  strategy=Strategy.SINGLE_VARIANCE, random_seed=None, reporter=None,
                  target_fitness_value=None, target_tolerance=1e-5, max_run_time=None,
-                 max_evaluations=None, bounds=None):
+                 max_evaluations=None, bounds=None, recombination_strategy=None):
         """Initializes an EvoPy instance.
 
         :param fitness_function: the fitness function on which the individuals are evaluated
@@ -57,6 +57,7 @@ class EvoPy:
         self.max_evaluations = max_evaluations
         self.bounds = bounds
         self.evaluations = 0
+        self.recombination_strategy = recombination_strategy 
 
     def _check_early_stop(self, start_time, best):
         """Check whether the algorithm can stop early, based on time and fitness target.
@@ -85,35 +86,44 @@ class EvoPy:
 
         population = self._init_population()
         best = sorted(population, reverse=self.maximize,
-                      key=lambda individual: individual.evaluate(self.fitness_function))[:5]
+                      key=lambda individual: individual.evaluate(self.fitness_function))[0].copy()
+        
 
         for generation in range(self.generations):
             
-            children = [parent.reproduce() for _ in range(self.num_children)
-                        for parent in population]
-            best_parent = sorted(population, reverse=self.maximize,
-                                key=lambda individual: individual.evaluate(self.fitness_function))[0]
-            combined_individuals = [best_parent] + children
-
-            # Apply the filter to the first 5 individuals (if they exist)
-            # This creates a list of individuals from the first 5 that meet the age criteria
-            filtered_first_5 = [ind for ind in combined_individuals[1:5] if ind.age < 20]
-
-            # Get the remaining individuals (from index 5 onwards) without any age filter
-            remaining_individuals = combined_individuals[5:]
-
+            
+            fitnesses = [individual.evaluate(self.fitness_function) for individual in population]
+            total_fitness = sum(fitnesses)
+            weights = np.divide(fitnesses, total_fitness)
+       
+            children = [parent.reproduce((weights, population), self.recombination_strategy) for _ in range(self.num_children)
+                        for parent in population[1:]]
+            
+            # print("Before", best.fitness, generation, self.evaluations)
+            # print(best.genotype)
             # Combine the filtered first 5 with the unfiltered remaining
-            population = sorted([best_parent] + filtered_first_5 + remaining_individuals,
-                                reverse=self.maximize,
-                                key=lambda individual: individual.evaluate(self.fitness_function))
+            sorted_combined = sorted([best] + children,
+                                    reverse=self.maximize,
+                                    key=lambda individual: individual.evaluate(self.fitness_function))
+            # print(best.genotype)
+
             
+            # print("After", best.fitness, sorted_combined[0].fitness, generation, self.evaluations)
+
+
+            if self.maximize:
+                if sorted_combined[0].fitness > best.fitness:
+                    best = sorted_combined[0].copy()
+            else: # Minimize
+                if sorted_combined[0].fitness < best.fitness:
+                    best = sorted_combined[0].copy()
             
-            for x in population: 
-                x.age += 1 
+            # for x in population: 
+            #     x.age += 1 
 
             self.evaluations += len(population)
-            population = population[:self.population_size]
-            best = population[0]
+            population = sorted_combined[:self.population_size]
+
 
             if self.reporter is not None:
                 mean = np.mean([x.fitness for x in population])
