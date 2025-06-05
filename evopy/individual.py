@@ -27,6 +27,7 @@ class Individual:
         strategy,
         strategy_parameters,
         constraint_handling_func,
+        age=0
         bounds=None,
         random_seed=None,
     ):
@@ -42,6 +43,7 @@ class Individual:
         self.random_seed = random_seed
         self.random = random_with_seed(self.random_seed)
         self.fitness = None
+        self.age = age
         self.constraint = None
         self.bounds = bounds
         self.strategy = strategy

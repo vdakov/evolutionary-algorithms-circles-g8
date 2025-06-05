@@ -114,23 +114,33 @@ class EvoPy:
         start_time = time.time()
 
         population = self._init_population()
-        best = sorted(
-            population,
-            reverse=self.maximize,
-            key=lambda individual: individual.evaluate(self.fitness_function),
-        )[0]
+        best = sorted(population, reverse=self.maximize,
+                      key=lambda individual: individual.evaluate(self.fitness_function))[:5]
 
         for generation in range(self.generations):
-            children = [
-                parent.reproduce()
-                for _ in range(self.num_children)
-                for parent in population
-            ]
-            population = sorted(
-                children,
-                reverse=self.maximize,
-                key=lambda individual: individual.evaluate(self.fitness_function),
-            )
+            
+            children = [parent.reproduce() for _ in range(self.num_children)
+                        for parent in population]
+            best_parent = sorted(population, reverse=self.maximize,
+                                key=lambda individual: individual.evaluate(self.fitness_function))[0]
+            combined_individuals = [best_parent] + children
+
+            # Apply the filter to the first 5 individuals (if they exist)
+            # This creates a list of individuals from the first 5 that meet the age criteria
+            filtered_first_5 = [ind for ind in combined_individuals[1:5] if ind.age < 20]
+
+            # Get the remaining individuals (from index 5 onwards) without any age filter
+            remaining_individuals = combined_individuals[5:]
+
+            # Combine the filtered first 5 with the unfiltered remaining
+            population = sorted([best_parent] + filtered_first_5 + remaining_individuals,
+                                reverse=self.maximize,
+                                key=lambda individual: individual.evaluate(self.fitness_function))
+            
+            
+            for x in population: 
+                x.age += 1 
+
             self.evaluations += len(population)
             population = population[: self.population_size]
             best = population[0]
