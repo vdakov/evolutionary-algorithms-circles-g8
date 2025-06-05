@@ -111,14 +111,6 @@ class CirclesInASquare:
         self.fig = None
         self.ax = None
 
-        plt.ion()
-        self.elbow_fig, self.elbow_ax = plt.subplots()
-        (self.elbow_line,) = self.elbow_ax.plot([], [], marker="o")
-        self.elbow_ax.set_title("Best encountered score in any generation")
-        self.elbow_ax.set_xlabel("Generation")
-        self.elbow_ax.set_ylabel("Best Score so Far")
-        self.elbow_ax.grid(True)
-
         assert 2 <= n_circles <= 20
 
         if self.plot_best_sol:
@@ -128,6 +120,15 @@ class CirclesInASquare:
             self.statistics_header()
 
     def set_up_plot(self):
+        # Elbow plot
+        plt.ion()
+        self.elbow_fig, self.elbow_ax = plt.subplots()
+        (self.elbow_line,) = self.elbow_ax.plot([], [], marker="o")
+        self.elbow_ax.set_title("Best encountered score in any generation")
+        self.elbow_ax.set_xlabel("Generation")
+        self.elbow_ax.set_ylabel("Best Score so Far")
+        self.elbow_ax.grid(True)
+        # Circles plot
         self.fig, self.ax = plt.subplots()
         self.ax.set_xlabel("$x_0$")
         self.ax.set_ylabel("$x_1$")
@@ -156,21 +157,19 @@ class CirclesInASquare:
         else:
             self.best_total_score.append(report.best_fitness)
 
-        self.elbow_line.set_xdata(range(1, len(self.best_total_score) + 1))
-        self.elbow_line.set_ydata(self.best_total_score)
-
-        self.elbow_ax.relim()
-        self.elbow_ax.autoscale_view()
-
-        # Redraw the plot
-        self.elbow_fig.canvas.draw()
-        self.elbow_fig.canvas.flush_events()
-
         if self.print_sols:
             output += " ({:s})".format(np.array2string(report.best_genotype))
         print(output)
 
         if self.plot_best_sol:
+            # Update elbow plot
+            self.elbow_line.set_xdata(range(1, len(self.best_total_score) + 1))
+            self.elbow_line.set_ydata(self.best_total_score)
+            self.elbow_ax.relim()
+            self.elbow_ax.autoscale_view()
+            self.elbow_fig.canvas.draw()
+            self.elbow_fig.canvas.flush_events()
+            # Update circles plot
             points = np.reshape(report.best_genotype, (-1, 2))
             self.ax.clear()
             self.ax.scatter(points[:, 0], points[:, 1], clip_on=False, color="black")
