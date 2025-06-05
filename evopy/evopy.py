@@ -34,6 +34,7 @@ class EvoPy:
         max_run_time=None,
         max_evaluations=None,
         bounds=None,
+        recombination_strategy=None,
     ):
         """Initializes an EvoPy instance.
 
@@ -79,6 +80,7 @@ class EvoPy:
         self.max_evaluations = max_evaluations
         self.bounds = bounds
         self.evaluations = 0
+        self.recombination_strategy = recombination_strategy 
 
     def _check_early_stop(self, start_time, best):
         """Check whether the algorithm can stop early, based on time and fitness target.
@@ -115,31 +117,40 @@ class EvoPy:
 
         population = self._init_population()
         best = sorted(population, reverse=self.maximize,
-                      key=lambda individual: individual.evaluate(self.fitness_function))[:5]
+                      key=lambda individual: individual.evaluate(self.fitness_function))[0].copy()
+        
 
         for generation in range(self.generations):
             
-            children = [parent.reproduce() for _ in range(self.num_children)
-                        for parent in population]
-            best_parent = sorted(population, reverse=self.maximize,
-                                key=lambda individual: individual.evaluate(self.fitness_function))[0]
-            combined_individuals = [best_parent] + children
-
-            # Apply the filter to the first 5 individuals (if they exist)
-            # This creates a list of individuals from the first 5 that meet the age criteria
-            filtered_first_5 = [ind for ind in combined_individuals[1:5] if ind.age < 20]
-
-            # Get the remaining individuals (from index 5 onwards) without any age filter
-            remaining_individuals = combined_individuals[5:]
-
+            
+            fitnesses = [individual.evaluate(self.fitness_function) for individual in population]
+            total_fitness = sum(fitnesses)
+            weights = np.divide(fitnesses, total_fitness)
+       
+            children = [parent.reproduce((weights, population), self.recombination_strategy) for _ in range(self.num_children)
+                        for parent in population[1:]]
+            
+            # print("Before", best.fitness, generation, self.evaluations)
+            # print(best.genotype)
             # Combine the filtered first 5 with the unfiltered remaining
-            population = sorted([best_parent] + filtered_first_5 + remaining_individuals,
-                                reverse=self.maximize,
-                                key=lambda individual: individual.evaluate(self.fitness_function))
+            sorted_combined = sorted([best] + children,
+                                    reverse=self.maximize,
+                                    key=lambda individual: individual.evaluate(self.fitness_function))
+            # print(best.genotype)
+
             
+            # print("After", best.fitness, sorted_combined[0].fitness, generation, self.evaluations)
+
+
+            if self.maximize:
+                if sorted_combined[0].fitness > best.fitness:
+                    best = sorted_combined[0].copy()
+            else: # Minimize
+                if sorted_combined[0].fitness < best.fitness:
+                    best = sorted_combined[0].copy()
             
-            for x in population: 
-                x.age += 1 
+            # for x in population: 
+            #     x.age += 1 
 
             self.evaluations += len(population)
             population = population[: self.population_size]

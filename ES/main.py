@@ -134,6 +134,7 @@ class CirclesInASquare:
             bounds=(0, 1),
             target_fitness_value=self.get_target(),
             max_evaluations=1e5,
+            recombination_strategy="intermediate"  # Use intermediate recombination
         )
 
         best_solution = evopy.run()
