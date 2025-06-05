@@ -1,4 +1,6 @@
 import matplotlib
+
+from evopy.strategy import Strategy
 matplotlib.use('Qt5Agg')
 
 import math
@@ -125,6 +127,9 @@ class CirclesInASquare:
             self.n_circles * 2,  # Number of parameters
             reporter=callback,  # Prints statistics at each generation
             maximize=True,
+            strategy=Strategy.FULL_VARIANCE,
+            random_seed=42,
+            population_size=30,
             generations=1000,
             bounds=(0, 1),
             target_fitness_value=self.get_target(),
