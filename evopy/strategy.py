@@ -12,3 +12,6 @@ class Strategy(Enum):
             return Strategy(s)
         except ValueError:
             ValueError(f"Invalid strategy: {s}")
+
+    def __str__(self):
+        return self.value

@@ -25,6 +25,9 @@ class ConstraintHandling(Enum):
         except ValueError:
             raise ValueError(f"Invalid Constraint Handling Technique: {s}")
 
+    def __str__(self):
+        return self.value
+
 
 def run_boundary_repair(individual: Individual, new_genotype):
     # Clip values to bounds

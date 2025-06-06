@@ -18,6 +18,9 @@ class InitializationStrategy(Enum):
         except ValueError:
             raise ValueError(f"Invalid initialization strategy: {s}")
 
+    def __str__(self):
+        return self.value
+
 
 def random_init(n_circles, bounds=(0, 1), jitter=0.1, random_state=None):
     """Random initialization"""

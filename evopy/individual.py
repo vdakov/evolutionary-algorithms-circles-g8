@@ -71,7 +71,11 @@ class Individual:
         return self.fitness
 
     def _reproduce_single_variance(
-        self, weights=None, population=None, reproduction_strategy=None, correlated_mutations=False
+        self,
+        weights=None,
+        population=None,
+        reproduction_strategy=None,
+        correlated_mutations=False,
     ):
         """Create a single offspring individual from the set genotype and strategy parameters.
 
@@ -79,7 +83,10 @@ class Individual:
 
         :return: an individual which is the offspring of the current instance
         """
-        used_genotype, used_strategy_parameters = self.genotype, self.strategy_parameters
+        used_genotype, used_strategy_parameters = (
+            self.genotype,
+            self.strategy_parameters,
+        )
 
         if reproduction_strategy:
             recombination_params = (weights, population)
@@ -108,7 +115,11 @@ class Individual:
         )
 
     def _reproduce_multiple_variance(
-        self, weights=None, population=None, reproduction_strategy=None, correlated_mutations=False
+        self,
+        weights=None,
+        population=None,
+        reproduction_strategy=None,
+        correlated_mutations=False,
     ):
         """Create a single offspring individual from the set genotype and strategy.
 
@@ -116,7 +127,10 @@ class Individual:
 
         :return: an individual which is the offspring of the current instance
         """
-        used_genotype, used_strategy_parameters = self.genotype, self.strategy_parameters
+        used_genotype, used_strategy_parameters = (
+            self.genotype,
+            self.strategy_parameters,
+        )
 
         if reproduction_strategy:
             recombination_params = (weights, population)
@@ -167,7 +181,10 @@ class Individual:
         :return: an individual which is the offspring of the current instance
         """
 
-        used_genotype, used_strategy_parameters = self.genotype, self.strategy_parameters
+        used_genotype, used_strategy_parameters = (
+            self.genotype,
+            self.strategy_parameters,
+        )
 
         if reproduction_strategy:
             recombination_params = (weights, population)
@@ -269,7 +286,9 @@ class Individual:
             # pick random individual to combine with
             other_individual = population[self.random.randint(0, len(population))]
             average_genotype = (self.genotype + other_individual.genotype) / 2.0
-            average_strategy_parameters = (self.strategy_parameters + other_individual.strategy_parameters) / 2.0
+            average_strategy_parameters = (
+                self.strategy_parameters + other_individual.strategy_parameters
+            ) / 2.0
             return average_genotype, average_strategy_parameters
         else:
             raise ValueError(f"Unknown recombination type: {reproduction_strategy}")
