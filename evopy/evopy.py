@@ -35,6 +35,7 @@ class EvoPy:
         max_evaluations=None,
         bounds=None,
         recombination_strategy=None,
+        elitism=True,
     ):
         """Initializes an EvoPy instance.
 
@@ -126,20 +127,20 @@ class EvoPy:
             fitnesses = [individual.evaluate(self.fitness_function) for individual in population]
             total_fitness = sum(fitnesses)
             weights = np.divide(fitnesses, total_fitness)
+            start_index = 0
+            
+            if self.elitism:
+                start_index = 1 #otherwise best will be modifield
        
             children = [parent.reproduce((weights, population), self.recombination_strategy) for _ in range(self.num_children)
-                        for parent in population[1:]]
+                        for parent in population[start_index:]]
             
-            # print("Before", best.fitness, generation, self.evaluations)
-            # print(best.genotype)
-            # Combine the filtered first 5 with the unfiltered remaining
-            sorted_combined = sorted([best] + children,
+            if self.elitism:
+                children.append(best.copy())
+
+            sorted_combined = sorted(children,
                                     reverse=self.maximize,
                                     key=lambda individual: individual.evaluate(self.fitness_function))
-            # print(best.genotype)
-
-            
-            # print("After", best.fitness, sorted_combined[0].fitness, generation, self.evaluations)
 
 
             if self.maximize:
