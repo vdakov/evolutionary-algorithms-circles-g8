@@ -63,6 +63,8 @@ class Individual:
             and len(strategy_parameters) == self.length * (self.length + 1) / 2
         ):
             self.reproduce = self._reproduce_full_variance
+        elif strategy == Strategy.CMA:
+            self.reproduce = self._reproduce_cma
         else:
             raise ValueError("The length of the strategy parameters was not correct.")
 
@@ -204,6 +206,13 @@ class Individual:
             self.constraint_handling_func,
             bounds=self.bounds,
         )
+        
+    def _reproduce_cma(self, weights=None, population=None, reproduction_strategy=None):
+        """Create a single offspring individual using the CMA strategy.
+
+        This function uses the CMA strategy, which is not implemented in this example.
+        """
+        raise NotImplementedError("CMA strategy reproduction is not implemented yet.")
         
         
     

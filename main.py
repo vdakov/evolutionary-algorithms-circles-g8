@@ -51,10 +51,10 @@ def parse_args():
     )
     parser.add_argument(
         "--strategy",
-        type=str,
-        choices=["single", "multiple", "full"],  # Make sure these match your valid strategy strings
+        type=Strategy.from_string,
+        choices=["single", "multiple", "full", "cma"],
         default="single",
-        help="Variance strategy (single/multiple/full)",
+        help="Variance strategy (single/multiple/full/cma)",
     )
     parser.add_argument(
         "--constraint_handling",

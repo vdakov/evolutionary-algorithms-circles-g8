@@ -1,18 +1,36 @@
-# Example adjustment if needed:
-class Strategy:
-    # Possible strategies
-    SINGLE = 0
-    MULTIPLE = 1
-    FULL_VARIANCE = 2
+"""Module containing enum Strategy describing different strategies available to the algorithm."""
+
+import argparse
+from enum import Enum
+
+
+class Strategy(Enum):
+    """Enum used to distinguish different types of strategies.
+
+    These strategies are used to determine the mechanism which each individual can use to control
+    its own mutability. The three strategies which are included are:
+
+    - SINGLE_VARIANCE: the same variance is used for each allele, no covariances
+    - MULTIPLE_VARIANCE: each allele has its own variance, no covariances
+    - FULL VARIANCE: each allele has its own variance, complete variances
+                     (encoded as rotation angles)
+    """
+
+    SINGLE_VARIANCE = 1
+    MULTIPLE_VARIANCE = 2
+    FULL_VARIANCE = 3
+    CMA = 4
 
     @staticmethod
-    def from_string(strategy_str):
-        # Map strings to enum values
-        if strategy_str == "single":
-            return Strategy.SINGLE
-        elif strategy_str == "multiple":
-            return Strategy.MULTIPLE
-        elif strategy_str == "full":
-            return Strategy.FULL_VARIANCE
-        else:
-            raise ValueError(f"Invalid strategy: {strategy_str}")
+    def from_string(s: str):
+        match s:
+            case "single":
+                return Strategy.SINGLE_VARIANCE
+            case "multiple":
+                return Strategy.MULTIPLE_VARIANCE
+            case "full":
+                return Strategy.FULL_VARIANCE
+            case "cma":
+                return Strategy.CMA
+            case _:
+                argparse.ArgumentTypeError(f"Invalid strategy: {s}")
