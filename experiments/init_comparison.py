@@ -23,5 +23,3 @@ if __name__ == "__main__":
         print(f"\nInitialization Scheme: {init}")
         print(f"Mean Fitness: {stats['mean_fitness']:.6f} ± {stats['std_fitness']:.6f}")
         print(f"Best Fitness: {stats['best_fitness']:.6f}")
-        print(f"Mean Gap to Target: {stats['mean_gap_to_target']:.6f}")
-        print(f"Best Gap to Target: {stats['best_gap_to_target']:.6f}")

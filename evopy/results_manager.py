@@ -108,11 +108,6 @@ class ResultsManager:
             "runtime_seconds": runtime,
             "final_score": self.best_scores[-1] if self.best_scores else None,
             "target_value": target_value,
-            "gap_to_target": (
-                abs(self.best_scores[-1] - target_value)
-                if self.best_scores and target_value
-                else None
-            ),
             "generations_run": len(self.generation_scores),
             "final_solution": (
                 final_solution.tolist()
