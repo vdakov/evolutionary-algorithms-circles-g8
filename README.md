@@ -10,13 +10,13 @@ This repository contains an implementation of an Evolution Strategy algorithm to
 - Todor Slavov
 - Ivo Yordanov
 
-## Current Implementation
+## Baseline
 
-The current implementation uses an Evolution Strategy (ES) algorithm with:
+We use the Evolution Strategy (ES) algorithm with:
 
 - Multiple strategy variants (single variance, multiple variance, full variance)
-- Basic boundary handling
-- Random initialization
+- Random/resampling boundary repair
+- Random (normal) initialization
 - Early stopping
 
 ## Possible Improvements
@@ -28,9 +28,12 @@ The current implementation uses an Evolution Strategy (ES) algorithm with:
 
    - [x] Problem-specific initialization scheme
 
+   - [ ] CMA
+   - [ ] ES2 with self-adaptation
+
    - [x] Weighted Recombination
    - [x] Elitism
-   
+
    - [x] Correlated Mutations
 
 2. Parameter Optimization
