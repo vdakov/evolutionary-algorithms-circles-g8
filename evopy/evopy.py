@@ -25,7 +25,7 @@ class EvoPy:
         mean=0,
         std=1,
         maximize=False,
-        strategy=Strategy.SINGLE_VARIANCE,
+        strategy=Strategy.SINGLE,
         constraint_handling_func=run_random_repair,
         random_seed=None,
         reporter=None,
@@ -121,10 +121,9 @@ class EvoPy:
         best = sorted(population, reverse=self.maximize,
                       key=lambda individual: individual.evaluate(self.fitness_function))[0].copy()
         
-
         for generation in range(self.generations):
             
-            children_args = None
+            children_args = ()
             
             if self.recombination_strategy:
                 fitnesses = [individual.evaluate(self.fitness_function) for individual in population]
@@ -157,7 +156,7 @@ class EvoPy:
                     best = sorted_combined[0].copy()
 
             self.evaluations += len(population)
-            population = population[: self.population_size]
+            population = sorted_combined[: self.population_size]
             best = population[0]
 
             if self.reporter is not None:
@@ -180,9 +179,10 @@ class EvoPy:
         return best.genotype
 
     def _init_population(self):
-        if self.strategy == Strategy.SINGLE_VARIANCE:
+        self.strategy = Strategy.from_string(self.strategy) if isinstance(self.strategy, str) else self.strategy
+        if self.strategy == Strategy.SINGLE:
             strategy_parameters = self.random.randn(1)
-        elif self.strategy == Strategy.MULTIPLE_VARIANCE:
+        elif self.strategy == Strategy.MULTIPLE:
             strategy_parameters = self.random.randn(self.individual_length)
         elif self.strategy == Strategy.FULL_VARIANCE:
             strategy_parameters = self.random.randn(
@@ -220,7 +220,8 @@ class EvoPy:
                 strategy_parameters,
                 self.constraint_handling_func,
                 # Set seed and bounds for reproduction
-                random_seed=self.random,
+                
+                random_seed=self.random_seed,
                 bounds=self.bounds,
             )
             for parameters in population_parameters

@@ -27,7 +27,7 @@ class Individual:
         strategy,
         strategy_parameters,
         constraint_handling_func,
-        age=0
+        age=0,
         bounds=None,
         random_seed=None,
     ):
@@ -49,14 +49,12 @@ class Individual:
         self.strategy = strategy
         self.strategy_parameters = strategy_parameters
         self.constraint_handling_func = constraint_handling_func
-        if not isinstance(strategy, Strategy):
-            raise ValueError(
-                "Provided strategy parameter was not an instance of Strategy."
-            )
-        if strategy == Strategy.SINGLE_VARIANCE and len(strategy_parameters) == 1:
+        
+
+        if strategy == Strategy.SINGLE and len(strategy_parameters) == 1:
             self.reproduce = self._reproduce_single_variance
         elif (
-            strategy == Strategy.MULTIPLE_VARIANCE
+            strategy == Strategy.MULTIPLE
             and len(strategy_parameters) == self.length
         ):
             self.reproduce = self._reproduce_multiple_variance
@@ -78,30 +76,22 @@ class Individual:
 
         return self.fitness
 
-    def _reproduce_single_variance(self, weights=None, population=None, strategy=None):
+    def _reproduce_single_variance(self, weights=None, population=None, reproduction_strategy=None):
         """Create a single offspring individual from the set genotype and strategy parameters.
 
         This function uses the single variance strategy.
 
         :return: an individual which is the offspring of the current instance
         """
-<<<<<<< HEAD:evopy/individual.py
-        if strategy:
-            self.recombination(self.genotype, self.strategy_parameters, recombination_params, strategy=strategy)
-=======
-
-        new_genotype = self.genotype + self.strategy_parameters[0] * self.random.randn(self.length)
-        # Randomly sample out of bounds indices
-        oob_indices = (new_genotype < self.bounds[0]) | (new_genotype > self.bounds[1])
-        new_genotype[oob_indices] = self.random.uniform(self.bounds[0], self.bounds[1], size=np.count_nonzero(oob_indices))
->>>>>>> d46dfb8 (Fix elitism arguments):ES/evopy/individual.py
+        if reproduction_strategy:
+            recombination_params = (weights, population)
+            self.recombination(self.genotype, self.strategy_parameters, recombination_params, reproduction_strategy=reproduction_strategy)
     
         new_genotype = self.genotype + self.strategy_parameters[0] * self.random.randn(
             self.length
         )
         new_genotype = self.constraint_handling_func(self, new_genotype)
         scale_factor = self.random.randn() * np.sqrt(1 / (2 * self.length))
-<<<<<<< HEAD:evopy/individual.py
         new_parameters = [
             max(self.strategy_parameters[0] * np.exp(scale_factor), self._EPSILON)
         ]
@@ -113,31 +103,14 @@ class Individual:
             bounds=self.bounds,
             random_seed=self.random,
         )
-=======
-        new_parameters = [max(self.strategy_parameters[0] * np.exp(scale_factor), self._EPSILON)]
-        
-    
-        if strategy:
-            recombination_params = (weights, population)
-            self.recombination(new_genotype, new_parameters, recombination_params, strategy=strategy)
-        
-        return Individual(new_genotype, self.strategy, new_parameters, bounds=self.bounds, age=0, random_seed=self.random)
-        
->>>>>>> d46dfb8 (Fix elitism arguments):ES/evopy/individual.py
 
-    def _reproduce_multiple_variance(self, weights=None, population=None, strategy=None):
+    def _reproduce_multiple_variance(self, weights=None, population=None, reproduction_strategy=None):
         """Create a single offspring individual from the set genotype and strategy.
 
         This function uses the multiple variance strategy.
 
         :return: an individual which is the offspring of the current instance
         """
-<<<<<<< HEAD:evopy/individual.py
-        
-        if strategy:
-            self.recombination(self.genotype, self.strategy_parameters, recombination_params, strategy=strategy)
-=======
->>>>>>> d46dfb8 (Fix elitism arguments):ES/evopy/individual.py
             
         new_genotype = self.genotype + [
             self.strategy_parameters[i] * self.random.randn()
@@ -145,11 +118,11 @@ class Individual:
         ]
         new_genotype = self.constraint_handling_func(self, new_genotype)
         global_scale_factor = self.random.randn() * np.sqrt(1 / (2 * self.length))
-<<<<<<< HEAD:evopy/individual.py
         scale_factors = [
             self.random.randn() * np.sqrt(1 / 2 * np.sqrt(self.length))
             for _ in range(self.length)
         ]
+        
         new_parameters = [
             max(
                 np.exp(global_scale_factor + scale_factors[i])
@@ -158,6 +131,11 @@ class Individual:
             )
             for i in range(self.length)
         ]
+        
+        if reproduction_strategy:
+            recombination_params = (weights, population)
+            self.recombination(self.genotype, self.strategy_parameters, recombination_params, reproduction_strategy=reproduction_strategy)
+            
         return Individual(
             new_genotype,
             self.strategy,
@@ -165,23 +143,9 @@ class Individual:
             self.constraint_handling_func,
             bounds=self.bounds,
         )
-=======
-        scale_factors = [self.random.randn() * np.sqrt(1 / 2 * np.sqrt(self.length))
-                         for _ in range(self.length)]
-        new_parameters = [max(np.exp(global_scale_factor + scale_factors[i])
-                              * self.strategy_parameters[i], self._EPSILON)
-                          for i in range(self.length)]
-        
-        if strategy:
-            recombination_params = (weights, population) 
-            self.recombination(new_genotype, new_parameters, recombination_params, strategy=strategy)
-        
-        
-        return Individual(new_genotype, self.strategy, new_parameters, age=0, bounds=self.bounds)
->>>>>>> d46dfb8 (Fix elitism arguments):ES/evopy/individual.py
 
     # pylint: disable=invalid-name
-    def _reproduce_full_variance(self, weights=None, population=None, strategy=None):
+    def _reproduce_full_variance(self, weights=None, population=None, reproduction_strategy=None):
         """Create a single offspring individual from the set genotype and strategy.
 
         This function uses the full variance strategy, as described in [1]. To emphasize this, the
@@ -226,26 +190,26 @@ class Individual:
                 T = np.matmul(T, T_pq)
         new_genotype = self.genotype + T @ self.random.randn(self.length)
         new_genotype = self.constraint_handling_func(self, new_genotype)
+
+        strategy_parameters = np.array(new_variances + new_rotations)
+        
+        if reproduction_strategy:
+            recombination_params = (weights, population) 
+            self.recombination(new_genotype, strategy_parameters, recombination_params, reproduction_strategy=reproduction_strategy)
+        
         return Individual(
             new_genotype,
             self.strategy,
-            new_variances + new_rotations,
+            strategy_parameters,
             self.constraint_handling_func,
             bounds=self.bounds,
         )
         
-        strategy_parameters = np.array(new_variances + new_rotations)
-        
-        if strategy:
-            recombination_params = (weights, population) 
-            self.recombination(new_genotype, strategy_parameters, recombination_params, strategy=strategy)
-        
-        return Individual(new_genotype, self.strategy, strategy_parameters, age=0, bounds=self.bounds)
         
     
     
-    def recombination(self, x, strategy_parameters, recombination_params, strategy): 
-        if strategy == "weighted":
+    def recombination(self, x, strategy_parameters, recombination_params, reproduction_strategy): 
+        if reproduction_strategy == "weighted":
             weights, population = recombination_params
             w_x = 0.7
             w_r = 0.3
@@ -260,7 +224,8 @@ class Individual:
             strategy_parameters = (w_x) * strategy_parameters + aggregate_r * w_r
             self.genotype = x_new
             self.strategy_parameters = strategy_parameters
-        elif strategy == "intermediate":
+            print("Recombination using weighted strategy with weights:", weights)
+        elif reproduction_strategy == "intermediate":
             weights, population = recombination_params
             
             if not population:
@@ -282,11 +247,7 @@ class Individual:
             # self.strategy_parameters = sum_strategy_parameters / num_parents
         
         else:
-            raise ValueError(f"Unknown recombination type: {strategy}")
-    
-            
-        
-    
+            raise ValueError(f"Unknown recombination type: {reproduction_strategy}")
     
     def copy(self):
         """
@@ -297,6 +258,7 @@ class Individual:
             genotype=np.copy(self.genotype),
             strategy=self.strategy,  # Enum or immutable, so direct assignment is fine
             strategy_parameters=np.copy(self.strategy_parameters),  # Copy the strategy parameters
+            constraint_handling_func=self.constraint_handling_func,  # Function, so direct assignment is fine
             bounds=self.bounds,  # Tuple/immutable, so direct assignment is fine
             age=self.age,
             random_seed=self.random_seed
