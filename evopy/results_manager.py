@@ -9,26 +9,28 @@ import numpy as np
 class ResultsManager:
     """Class for managing and storing experiment results."""
 
-    def __init__(self, experiment_name=None):
+    def __init__(self, experiment_name=None, save_files=True):
         """Initialize the results manager.
 
         Args:
             experiment_name: Optional name for the experiment. If None, uses timestamp.
         """
-        self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.experiment_name = experiment_name or "run"
+        self.start_time = None
+        self.settings = {}
+        self.best_scores = []
+        self.generation_scores = []
+        self.save_files = save_files
+
+    def start_run(self, settings):
+        self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.run_dir = os.path.join(
             "outputs", f"{self.timestamp}_{self.experiment_name}"
         )
-        os.makedirs(self.run_dir, exist_ok=True)
-
-        self.best_scores = []
-        self.generation_scores = []
-        self.start_time = None
-        self.settings = {}
-
-    def start_run(self, settings):
-        """Start a new run with given settings."""
+        # Create directory
+        if self.save_files:
+            os.makedirs(self.run_dir, exist_ok=True)
+        # Init params
         self.start_time = time.time()
         self.settings = settings
         self.best_scores = []
@@ -37,7 +39,6 @@ class ResultsManager:
     def update_progress(
         self, generation, best_fitness, avg_fitness, std_fitness, best_genotype
     ):
-        """Update progress with new generation results."""
         if len(self.best_scores) == 0 or best_fitness > self.best_scores[-1]:
             self.best_scores.append(best_fitness)
         else:
@@ -58,7 +59,8 @@ class ResultsManager:
         )
 
     def save_results(self, final_solution, target_value):
-        """Save all results to disk."""
+        if not self.save_files:
+            return
         # Save run settings
         settings_path = os.path.join(self.run_dir, "settings.json")
         with open(settings_path, "w") as f:
