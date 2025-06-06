@@ -134,6 +134,7 @@ class CirclesInASquare:
         init_strategy=None,
         init_jitter=0.1,
         results_manager=None,
+        random_seed=None,
     ):
         self.print_sols = print_sols
         self.output_statistics = output_statistics
@@ -145,6 +146,7 @@ class CirclesInASquare:
         self.init_strategy = init_strategy
         self.init_jitter = init_jitter
         self.results_manager = results_manager
+        self.random_seed = random_seed
 
         assert 2 <= n_circles <= 20
 
@@ -253,7 +255,6 @@ class CirclesInASquare:
             "max_run_time": max_run_time,
             "recombination_strategy": recombination_strategy,
             "elitism": elitism,
-            "random_seed": random_seed,
             "init_strategy": self.init_strategy.value,
             "init_jitter": self.init_jitter,
         }
@@ -267,7 +268,7 @@ class CirclesInASquare:
                     self.n_circles,
                     bounds=(0, 1),
                     jitter=self.init_jitter,
-                    random_state=random_seed,
+                    random_state=self.random_seed,
                 )
                 for _ in range(population_size)
             ]
@@ -289,7 +290,7 @@ class CirclesInASquare:
             strategy=strategy,
             constraint_handling_func=constraint_func_dispatch[constraint_handling],
             bounds=(0, 1),
-            random_seed=random_seed,
+            random_seed=self.random_seed,
             target_fitness_value=self.get_target(),
             max_evaluations=max_evaluations,
             max_run_time=max_run_time,
@@ -322,6 +323,7 @@ if __name__ == "__main__":
         init_strategy=args.init_strategy,
         init_jitter=args.init_jitter,
         results_manager=ResultsManager(),
+        random_seed=args.random_seed,
     )
     best = runner.run_evolution_strategies(
         population_size=args.population_size,
@@ -333,5 +335,4 @@ if __name__ == "__main__":
         recombination_strategy=args.recombination_strategy,
         elitism=args.elitism,
         max_run_time=args.max_time,
-        random_seed=args.random_seed,
     )

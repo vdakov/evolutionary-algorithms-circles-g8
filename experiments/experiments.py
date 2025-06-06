@@ -41,6 +41,7 @@ def run_single_comparison(
         "init_strategy": InitializationStrategy.RANDOM,
         "init_jitter": 0.1,
         "results_manager": results_manager,
+        "random_seed": None,  # Will be set per run
     }
     # Defaults for run_evolution_strategies
     evolution_defaults = {
@@ -52,8 +53,7 @@ def run_single_comparison(
         "max_evaluations": 1e5,
         "max_run_time": None,
         "recombination_strategy": None,
-        "elitism": True,
-        "random_seed": None,
+        "elitism": False,
     }
 
     # Results storage
@@ -64,11 +64,11 @@ def run_single_comparison(
         for opt in options:
             print(f"Testing {param_to_overwrite} = {opt}")
             # Construct arguments
-            circles_args = {**circles_defaults}
+            circles_args = {**circles_defaults, "random_seed": int(seed)}
             evolution_args = {
                 **evolution_defaults,
-                "random_seed": int(seed),
             }
+            # Tested parameter
             if param_in_runner:
                 evolution_args[param_to_overwrite] = opt
             else:
@@ -106,8 +106,6 @@ def run_single_comparison(
             "best_fitness": np.max(fitnesses),
             "worst_fitness": np.min(fitnesses),
             "target_value": target,
-            "mean_gap_to_target": np.mean([abs(f - target) for f in fitnesses]),
-            "best_gap_to_target": min([abs(f - target) for f in fitnesses]),
         }
     # Save detailed results
     results_path = os.path.join(results_manager.run_dir, "detailed_results.json")
