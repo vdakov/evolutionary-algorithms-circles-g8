@@ -1,5 +1,3 @@
-"""Module containing the individuals of the evolutionary strategy algorithm."""
-
 import numpy as np
 
 from evopy.strategy import Strategy

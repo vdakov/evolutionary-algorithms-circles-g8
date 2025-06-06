@@ -1,5 +1,3 @@
-"""Module used for the execution of the evolutionary algorithm."""
-
 import time
 
 import numpy as np
