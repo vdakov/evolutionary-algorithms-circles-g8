@@ -18,12 +18,10 @@ class EvoPy:
         self,
         fitness_function,
         individual_length,
-        warm_start=None,
+        initial_population,
         generations=1000,
         population_size=30,
         num_children=1,
-        mean=0,
-        std=1,
         maximize=False,
         strategy=Strategy.SINGLE,
         constraint_handling_func=run_random_repair,
@@ -41,12 +39,10 @@ class EvoPy:
 
         :param fitness_function: the fitness function on which the individuals are evaluated
         :param individual_length: the length of each individual
-        :param warm_start: the individual to start from
+        :param initial_population: the individual to start from
         :param generations: the number of generations to execute
         :param population_size: the population size of each generation
         :param num_children: the number of children generated per parent individual
-        :param mean: the mean for sampling the random offsets of the initial population
-        :param std: the standard deviation for sampling the random offsets of the initial population
         :param maximize: whether the fitness function should be maximized or minimized
         :param strategy: the strategy used to generate offspring by individuals. For more
                          information, check the Strategy enum
@@ -61,14 +57,10 @@ class EvoPy:
         """
         self.fitness_function = fitness_function
         self.individual_length = individual_length
-        self.warm_start = (
-            np.zeros(self.individual_length) if warm_start is None else warm_start
-        )
+        self.initial_population = initial_population
         self.generations = generations
         self.population_size = population_size
         self.num_children = num_children
-        self.mean = mean
-        self.std = std
         self.maximize = maximize
         self.strategy = strategy
         self.constraint_handling_func = constraint_handling_func
@@ -81,7 +73,7 @@ class EvoPy:
         self.max_evaluations = max_evaluations
         self.bounds = bounds
         self.evaluations = 0
-        self.recombination_strategy = recombination_strategy 
+        self.recombination_strategy = recombination_strategy
         self.elitism = elitism
 
     def _check_early_stop(self, start_time, best):
@@ -118,40 +110,49 @@ class EvoPy:
         start_time = time.time()
 
         population = self._init_population()
-        best = sorted(population, reverse=self.maximize,
-                      key=lambda individual: individual.evaluate(self.fitness_function))[0].copy()
-        
+        best = sorted(
+            population,
+            reverse=self.maximize,
+            key=lambda individual: individual.evaluate(self.fitness_function),
+        )[0].copy()
+
         for generation in range(self.generations):
-            
+
             children_args = ()
-            
+
             if self.recombination_strategy:
-                fitnesses = [individual.evaluate(self.fitness_function) for individual in population]
+                fitnesses = [
+                    individual.evaluate(self.fitness_function)
+                    for individual in population
+                ]
                 total_fitness = sum(fitnesses)
                 weights = np.divide(fitnesses, total_fitness)
                 children_args = (weights, population, self.recombination_strategy)
-                
-                
+
             start_index = 0
-            
+
             if self.elitism:
-                start_index = 1 
-                
-            children = [parent.reproduce(*children_args) for _ in range(self.num_children)
-                        for parent in population[start_index:]]
-            
+                start_index = 1
+
+            children = [
+                parent.reproduce(*children_args)
+                for _ in range(self.num_children)
+                for parent in population[start_index:]
+            ]
+
             if self.elitism:
                 children.append(best.copy())
 
-            sorted_combined = sorted(children,
-                                    reverse=self.maximize,
-                                    key=lambda individual: individual.evaluate(self.fitness_function))
-
+            sorted_combined = sorted(
+                children,
+                reverse=self.maximize,
+                key=lambda individual: individual.evaluate(self.fitness_function),
+            )
 
             if self.maximize:
                 if sorted_combined[0].fitness > best.fitness:
                     best = sorted_combined[0].copy()
-            else: # Minimize
+            else:  # Minimize
                 if sorted_combined[0].fitness < best.fitness:
                     best = sorted_combined[0].copy()
 
@@ -179,38 +180,25 @@ class EvoPy:
         return best.genotype
 
     def _init_population(self):
-        self.strategy = Strategy.from_string(self.strategy) if isinstance(self.strategy, str) else self.strategy
+        # Initialize the strategy parameters
         if self.strategy == Strategy.SINGLE:
-            strategy_parameters = self.random.randn(1)
+            strategy_parameters = np.asarray(self.random.randn(1))
         elif self.strategy == Strategy.MULTIPLE:
-            strategy_parameters = self.random.randn(self.individual_length)
+            strategy_parameters = np.asarray(self.random.randn(self.individual_length))
         elif self.strategy == Strategy.FULL_VARIANCE:
-            strategy_parameters = self.random.randn(
-                int((self.individual_length + 1) * self.individual_length / 2)
+            strategy_parameters = np.asarray(
+                self.random.randn(
+                    int((self.individual_length + 1) * self.individual_length / 2)
+                )
             )
         else:
             raise ValueError(
                 "Provided strategy parameter was not an instance of Strategy"
             )
+        # Initialize population parameters
         population_parameters = np.asarray(
-            [
-                self.warm_start
-                + self.random.normal(
-                    loc=self.mean, scale=self.std, size=self.individual_length
-                )
-                for _ in range(self.population_size)
-            ]
+            self.constraint_handling_func(self, self.initial_population)
         )
-
-        # Make sure parameters are within bounds
-        if self.bounds is not None:
-            oob_indices = (population_parameters < self.bounds[0]) | (
-                population_parameters > self.bounds[1]
-            )
-            population_parameters[oob_indices] = self.random.uniform(
-                self.bounds[0], self.bounds[1], size=np.count_nonzero(oob_indices)
-            )
-
         return [
             Individual(
                 # Initialize genotype within possible bounds
@@ -220,7 +208,6 @@ class EvoPy:
                 strategy_parameters,
                 self.constraint_handling_func,
                 # Set seed and bounds for reproduction
-                
                 random_seed=self.random_seed,
                 bounds=self.bounds,
             )

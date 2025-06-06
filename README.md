@@ -21,19 +21,22 @@ The current implementation uses an Evolution Strategy (ES) algorithm with:
 
 ## Possible Improvements
 
-1. Constraint Handling:
+1. Features
 
-   - [ ] Implement boundary repair
-   - [ ] Implement constraint domination
+   - [x] Constraint handling: boundary repair
+   - [ ] Constraint handling: constraint domination
 
-2. Initialization:
+   - [x] Problem-specific initialization scheme
 
-   - [ ] Develop problem-specific initialization scheme
+   - [x] Weighted Recombination
+   - [x] Elitism
 
-3. Parameter Optimization:
+2. Parameter Optimization
+
    - [ ] Optimize population size
-   - [ ] Optimize number of generations
-   - [ ] Optimize mutation parameters
+   - [ ] Optimize recombination params
+   - [ ] Optimize mutation params
+   - [ ] Optimize others...
 
 ## Setup and Usage
 

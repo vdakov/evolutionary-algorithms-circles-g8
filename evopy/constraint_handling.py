@@ -1,7 +1,5 @@
-import argparse
-from enum import Enum
-
 import numpy as np
+from enum import Enum
 
 from evopy.individual import Individual
 
@@ -16,23 +14,16 @@ class ConstraintHandling(Enum):
     - RANDOM_REPAIR: If x_i < 0 or x_i > 1, resample x_i
     """
 
-    BOUNDARY_REPAIR = 1
-    CONSTRAINT_DOMINATION = 2
-    RANDOM_REPAIR = 3
+    BOUNDARY_REPAIR = "BR"
+    CONSTRAINT_DOMINATION = "CD"
+    RANDOM_REPAIR = "RR"
 
     @staticmethod
     def from_string(s: str):
-        match s:
-            case "BR":
-                return ConstraintHandling.BOUNDARY_REPAIR
-            case "CD":
-                return ConstraintHandling.CONSTRAINT_DOMINATION
-            case "RR":
-                return ConstraintHandling.RANDOM_REPAIR
-            case _:
-                argparse.ArgumentTypeError(
-                    f"Invalid Constraint Handling Technique: {s}"
-                )
+        try:
+            return ConstraintHandling(s)
+        except ValueError:
+            raise ValueError(f"Invalid Constraint Handling Technique: {s}")
 
 
 def run_boundary_repair(individual: Individual, new_genotype):
@@ -55,3 +46,10 @@ def run_random_repair(individual: Individual, new_genotype):
         individual.bounds[0], individual.bounds[1], size=np.count_nonzero(oob_indices)
     )
     return new_genotype
+
+
+constraint_func_dispatch = {
+    ConstraintHandling.BOUNDARY_REPAIR: run_boundary_repair,
+    ConstraintHandling.CONSTRAINT_DOMINATION: run_constraint_domination,
+    ConstraintHandling.RANDOM_REPAIR: run_random_repair,
+}

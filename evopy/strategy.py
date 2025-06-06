@@ -1,18 +1,14 @@
-# Example adjustment if needed:
-class Strategy:
-    # Possible strategies
-    SINGLE = 0
-    MULTIPLE = 1
-    FULL_VARIANCE = 2
+from enum import Enum
+
+
+class Strategy(Enum):
+    SINGLE = "single"
+    MULTIPLE = "multiple"
+    FULL_VARIANCE = "full"
 
     @staticmethod
-    def from_string(strategy_str):
-        # Map strings to enum values
-        if strategy_str == "single":
-            return Strategy.SINGLE
-        elif strategy_str == "multiple":
-            return Strategy.MULTIPLE
-        elif strategy_str == "full":
-            return Strategy.FULL_VARIANCE
-        else:
-            raise ValueError(f"Invalid strategy: {strategy_str}")
+    def from_string(s: str):
+        try:
+            return Strategy(s)
+        except ValueError:
+            ValueError(f"Invalid strategy: {s}")

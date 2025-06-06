@@ -4,13 +4,15 @@ matplotlib.use("Qt5Agg")
 
 import math
 import argparse
-from evopy import EvoPy
-from evopy import ProgressReport
 from sklearn.metrics.pairwise import euclidean_distances
 import matplotlib.pyplot as plt
 import numpy as np
+
+from evopy import EvoPy
+from evopy import ProgressReport
 from evopy.strategy import Strategy
 from evopy.constraint_handling import *
+from evopy.initializers import *
 
 ###########################################################
 #                                                         #
@@ -52,43 +54,63 @@ def parse_args():
     parser.add_argument(
         "--strategy",
         type=str,
-        choices=["single", "multiple", "full"],  # Make sure these match your valid strategy strings
+        choices=[s.value for s in Strategy],
         default="single",
         help="Variance strategy (single/multiple/full)",
     )
+    # Extension parameters
     parser.add_argument(
         "--constraint_handling",
-        type=ConstraintHandling.from_string,
-        choices=[ConstraintHandling.BOUNDARY_REPAIR, ConstraintHandling.CONSTRAINT_DOMINATION, ConstraintHandling.RANDOM_REPAIR],
-        default="BR",
+        type=str,
+        choices=[s.value for s in ConstraintHandling],
+        default="RR",
         help="How to deal with out-of-bounds individuals: "
         "Boundary Repair (BD), Constraint domination (CD), or Random repair (RR)",
     )
-    # Visualization and output
+    parser.add_argument("--elitism", type=bool, help="Elitism", default=False)
     parser.add_argument(
-        "--skip_plot_sols", action="store_true", help="Plot solutions during evolution"
+        "--recombination_strategy",
+        type=str,
+        choices=["weighted", "intermediate"],
+        default=None,
+        help="Recombination strategy to use",
     )
     parser.add_argument(
-        "--skip_print_sols",
+        "--init_strategy",
+        type=str,
+        choices=[s.value for s in InitializationStrategy],
+        default="random",
+        help="Initialization strategy",
+    )
+    parser.add_argument(
+        "--init_jitter",
+        type=float,
+        default=0.1,
+        help="jitter/std amount for initialization strategies",
+    )
+    # Visualization and output
+    parser.add_argument(
+        "--skip_plot",
         action="store_true",
-        help="Print solutions during evolution",
+        help="Skip plotting solutions during evolution",
+    )
+    parser.add_argument(
+        "--skip_print",
+        action="store_true",
+        help="Skip printing solutions during evolution",
     )
     # Early stopping criteria
     parser.add_argument(
         "--max_evals", type=int, default=1e5, help="Maximum number of evaluations"
     )
     parser.add_argument("--max_time", type=float, help="Maximum runtime in seconds")
-    
-    parser.add_argument("--elitism", type=bool, help="Elitism", default=False)
-    parser.add_argument("--recombination_strategy",type=str,
-        choices=["weighted","intermediate"],
-        default=None,
-        help="Recombination strategy to use",
-    )
-    # Parse and verify
+    # Parse, convert, and validate arguments
     args = parser.parse_args()
+    args.strategy = Strategy.from_string(args.strategy)
+    args.constraint_handling = ConstraintHandling.from_string(args.constraint_handling)
+    args.init_strategy = InitializationStrategy.from_string(args.init_strategy)
     if not 2 <= args.n_circles:
-        parser.error("Number of circles must be at least 20")
+        parser.error("Number of circles must be at least 2")
     return args
 
 
@@ -117,7 +139,13 @@ def circles_in_a_square(individual):
 
 class CirclesInASquare:
     def __init__(
-        self, n_circles, output_statistics=True, plot_sols=False, print_sols=False
+        self,
+        n_circles,
+        print_sols=True,
+        plot_sols=True,
+        output_statistics=True,
+        init_strategy=None,
+        init_jitter=0.1,
     ):
         self.print_sols = print_sols
         self.output_statistics = output_statistics
@@ -126,6 +154,8 @@ class CirclesInASquare:
         self.best_total_score = []
         self.fig = None
         self.ax = None
+        self.init_strategy = init_strategy
+        self.init_jitter = init_jitter
 
         assert 2 <= n_circles <= 20
 
@@ -236,6 +266,18 @@ class CirclesInASquare:
     ):
         callback = self.statistics_callback if self.output_statistics else None
 
+        initial_population = np.asarray(
+            [
+                init_func_dipatch[self.init_strategy](
+                    self.n_circles,
+                    bounds=(0, 1),
+                    jitter=self.init_jitter,
+                    random_state=None,
+                )
+                for _ in range(population_size)
+            ]
+        )
+
         evopy = EvoPy(
             (
                 circles_in_a_square
@@ -243,6 +285,7 @@ class CirclesInASquare:
                 else circles_in_a_square_scipy
             ),  # Fitness function
             self.n_circles * 2,  # Number of parameters
+            initial_population,
             reporter=callback,  # Prints statistics at each generation
             maximize=True,
             generations=generations,
@@ -256,7 +299,7 @@ class CirclesInASquare:
             max_evaluations=max_evaluations,
             max_run_time=max_run_time,
             recombination_strategy=recombination_strategy,
-            elitism=elitism
+            elitism=elitism,
         )
 
         best_solution = evopy.run()
@@ -267,22 +310,20 @@ class CirclesInASquare:
         plt.ioff()
         plt.show()  # Keep the plot open at the end
 
+        # TODO: Use reporter to print the best solution,
+        # as well as plot the final elbow plot and best population solution
         return best_solution
 
 
 if __name__ == "__main__":
     args = parse_args()
-    # Map string strategy to Strategy enum
     runner = CirclesInASquare(
         n_circles=args.n_circles,
-        print_sols=not args.skip_print_sols,
-        plot_sols=not args.skip_plot_sols,
+        print_sols=not args.skip_print,
+        plot_sols=not args.skip_plot,
+        init_strategy=args.init_strategy,
+        init_jitter=args.init_jitter,
     )
-    constraint_func_dispatch = {
-        ConstraintHandling.BOUNDARY_REPAIR: run_boundary_repair,
-        ConstraintHandling.CONSTRAINT_DOMINATION: run_constraint_domination,
-        ConstraintHandling.RANDOM_REPAIR: run_random_repair,
-    }
     best = runner.run_evolution_strategies(
         population_size=args.population_size,
         num_children=args.num_children,
@@ -294,3 +335,4 @@ if __name__ == "__main__":
         elitism=args.elitism,
         max_run_time=args.max_time,
     )
+    # TODO: fetch dataset and compare with optimal solution
