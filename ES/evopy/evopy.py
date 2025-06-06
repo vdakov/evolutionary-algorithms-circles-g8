@@ -58,6 +58,7 @@ class EvoPy:
         self.bounds = bounds
         self.evaluations = 0
         self.recombination_strategy = recombination_strategy 
+        self.elitism = elitism
 
     def _check_early_stop(self, start_time, best):
         """Check whether the algorithm can stop early, based on time and fitness target.
@@ -91,16 +92,21 @@ class EvoPy:
 
         for generation in range(self.generations):
             
+            children_args = None
             
-            fitnesses = [individual.evaluate(self.fitness_function) for individual in population]
-            total_fitness = sum(fitnesses)
-            weights = np.divide(fitnesses, total_fitness)
+            if self.recombination_strategy:
+                fitnesses = [individual.evaluate(self.fitness_function) for individual in population]
+                total_fitness = sum(fitnesses)
+                weights = np.divide(fitnesses, total_fitness)
+                children_args = (weights, population, self.recombination_strategy)
+                
+                
             start_index = 0
             
             if self.elitism:
-                start_index = 1 #otherwise best will be modifield
-       
-            children = [parent.reproduce((weights, population), self.recombination_strategy) for _ in range(self.num_children)
+                start_index = 1 
+                
+            children = [parent.reproduce(*children_args) for _ in range(self.num_children)
                         for parent in population[start_index:]]
             
             if self.elitism:
@@ -117,9 +123,6 @@ class EvoPy:
             else: # Minimize
                 if sorted_combined[0].fitness < best.fitness:
                     best = sorted_combined[0].copy()
-            
-            # for x in population: 
-            #     x.age += 1 
 
             self.evaluations += len(population)
             population = sorted_combined[:self.population_size]

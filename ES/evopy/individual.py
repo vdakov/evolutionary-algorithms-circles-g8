@@ -59,16 +59,14 @@ class Individual:
 
         return self.fitness
 
-    def _reproduce_single_variance(self, recombination_params=None, strategy=None):
+    def _reproduce_single_variance(self, weights=None, population=None, strategy=None):
         """Create a single offspring individual from the set genotype and strategy parameters.
 
         This function uses the single variance strategy.
 
         :return: an individual which is the offspring of the current instance
         """
-        if strategy:
-            self.recombination(self.genotype, self.strategy_parameters, recombination_params, strategy=strategy)
-        
+
         new_genotype = self.genotype + self.strategy_parameters[0] * self.random.randn(self.length)
         # Randomly sample out of bounds indices
         oob_indices = (new_genotype < self.bounds[0]) | (new_genotype > self.bounds[1])
@@ -76,17 +74,22 @@ class Individual:
     
         scale_factor = self.random.randn() * np.sqrt(1 / (2 * self.length))
         new_parameters = [max(self.strategy_parameters[0] * np.exp(scale_factor), self._EPSILON)]
+        
+    
+        if strategy:
+            recombination_params = (weights, population)
+            self.recombination(new_genotype, new_parameters, recombination_params, strategy=strategy)
+        
         return Individual(new_genotype, self.strategy, new_parameters, bounds=self.bounds, age=0, random_seed=self.random)
+        
 
-    def _reproduce_multiple_variance(self, recombination_params=None, strategy=None):
+    def _reproduce_multiple_variance(self, weights=None, population=None, strategy=None):
         """Create a single offspring individual from the set genotype and strategy.
 
         This function uses the multiple variance strategy.
 
         :return: an individual which is the offspring of the current instance
         """
-        if strategy:
-            self.recombination(self.genotype, self.strategy_parameters, recombination_params, strategy=strategy)
             
         new_genotype = self.genotype + [self.strategy_parameters[i] * self.random.randn()
                                         for i in range(self.length)]
@@ -100,10 +103,16 @@ class Individual:
         new_parameters = [max(np.exp(global_scale_factor + scale_factors[i])
                               * self.strategy_parameters[i], self._EPSILON)
                           for i in range(self.length)]
+        
+        if strategy:
+            recombination_params = (weights, population) 
+            self.recombination(new_genotype, new_parameters, recombination_params, strategy=strategy)
+        
+        
         return Individual(new_genotype, self.strategy, new_parameters, age=0, bounds=self.bounds)
 
     # pylint: disable=invalid-name
-    def _reproduce_full_variance(self, recombination_params=None, strategy=None):
+    def _reproduce_full_variance(self, weights=None, population=None, strategy=None):
         """Create a single offspring individual from the set genotype and strategy.
 
         This function uses the full variance strategy, as described in [1]. To emphasize this, the
@@ -111,9 +120,6 @@ class Individual:
 
         :return: an individual which is the offspring of the current instance
         """
-        
-
-            
         
         global_scale_factor = self.random.randn() * np.sqrt(1 / (2 * self.length))
         scale_factors = [self.random.randn() * np.sqrt(1 / 2 * np.sqrt(self.length))
@@ -140,18 +146,21 @@ class Individual:
         oob_indices = (new_genotype < self.bounds[0]) | (new_genotype > self.bounds[1])
         new_genotype[oob_indices] = self.random.uniform(self.bounds[0], self.bounds[1], size=np.count_nonzero(oob_indices))
         
-        if strategy:
-            self.recombination(self.genotype, self.strategy_parameters, recombination_params, strategy=strategy)
+        strategy_parameters = np.array(new_variances + new_rotations)
         
-        return Individual(new_genotype, self.strategy, np.array(new_variances + new_rotations), age=0, bounds=self.bounds)
+        if strategy:
+            recombination_params = (weights, population) 
+            self.recombination(new_genotype, strategy_parameters, recombination_params, strategy=strategy)
+        
+        return Individual(new_genotype, self.strategy, strategy_parameters, age=0, bounds=self.bounds)
+        
     
     
     def recombination(self, x, strategy_parameters, recombination_params, strategy): 
         if strategy == "weighted":
             weights, population = recombination_params
-            # print(weights)
-            w_x = 0.4
-            w_r = 0.6
+            w_x = 0.7
+            w_r = 0.3
             aggregate_x = np.zeros(x.shape)
             aggregate_r = np.zeros(strategy_parameters.shape)
             for i, individual in enumerate(population): 
