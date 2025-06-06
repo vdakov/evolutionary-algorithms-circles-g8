@@ -113,6 +113,7 @@ class EvoPy:
             reverse=self.maximize,
             key=lambda individual: individual.evaluate(self.fitness_function),
         )[0].copy()
+        best_ever = best.copy()
 
         for generation in range(self.generations):
             children_args = ()
@@ -138,24 +139,24 @@ class EvoPy:
             ]
 
             if self.elitism:
-                children.append(best.copy())
+                children.append(best_ever.copy())
 
             sorted_combined = sorted(
                 children,
                 reverse=self.maximize,
                 key=lambda individual: individual.evaluate(self.fitness_function),
             )
+            best = population[0]
 
             if self.maximize:
-                if sorted_combined[0].fitness > best.fitness:
-                    best = sorted_combined[0].copy()
+                if best.fitness > best_ever.fitness:
+                    best_ever = best.copy()
             else:  # Minimize
-                if sorted_combined[0].fitness < best.fitness:
-                    best = sorted_combined[0].copy()
+                if best.fitness < best_ever.fitness:
+                    best_ever = best.copy()
 
             self.evaluations += len(population)
             population = sorted_combined[: self.population_size]
-            best = population[0]
 
             if self.reporter is not None:
                 mean = np.mean([x.fitness for x in population])
@@ -171,10 +172,10 @@ class EvoPy:
                     )
                 )
 
-            if self._check_early_stop(start_time, best):
+            if self._check_early_stop(start_time, best_ever):
                 break
 
-        return best.genotype
+        return best_ever.genotype
 
     def _init_population(self):
         # Initialize the strategy parameters
