@@ -13,24 +13,7 @@ from evopy import ProgressReport
 from evopy.strategy import Strategy
 from evopy.constraint_handling import *
 from evopy.initializers import *
-
-###########################################################
-#                                                         #
-# EvoPy framework from https://github.com/evopy/evopy     #
-# Read documentation on github for further information.   #
-#                                                         #
-# Adjustments by Renzo Scholman:                          #
-#       Added evaluation counter (also in ProgressReport) #
-#       Added max evaluation stopping criterion           #
-#       Added random repair for solution                  #
-#       Added target fitness value tolerance              #
-#                                                         #
-# Original license stored in LICENSE file                 #
-#                                                         #
-# Install required dependencies with:                     #
-#       pip install -r requirements.txt               #
-#                                                         #
-###########################################################
+from evopy.optimal_values import optimal_values
 
 
 def parse_args():
@@ -39,7 +22,7 @@ def parse_args():
     )
     # Problem configuration
     parser.add_argument(
-        "--n_circles", type=int, default=10, help="Number of circles to pack"
+        "--n_circles", "-n", type=int, default=10, help="Number of circles to pack"
     )
     # Evolution Strategy parameters
     parser.add_argument(
@@ -67,7 +50,7 @@ def parse_args():
         help="How to deal with out-of-bounds individuals: "
         "Boundary Repair (BD), Constraint domination (CD), or Random repair (RR)",
     )
-    parser.add_argument("--elitism", type=bool, help="Elitism", default=False)
+    parser.add_argument("--elitism", action="store_true", help="Elitism")
     parser.add_argument(
         "--recombination_strategy",
         type=str,
@@ -228,29 +211,7 @@ class CirclesInASquare:
             self.fig.canvas.flush_events()
 
     def get_target(self):
-        values_to_reach = [
-            1.414213562373095048801688724220,  # 2
-            1.035276180410083049395595350499,  # 3
-            1.000000000000000000000000000000,  # 4
-            0.707106781186547524400844362106,  # 5
-            0.600925212577331548853203544579,  # 6
-            0.535898384862245412945107316990,  # 7
-            0.517638090205041524697797675248,  # 8
-            0.500000000000000000000000000000,  # 9
-            0.421279543983903432768821760651,  # 10
-            0.398207310236844165221512929748,
-            0.388730126323020031391610191835,
-            0.366096007696425085295389370603,
-            0.348915260374018877918854409001,
-            0.341081377402108877637121191351,
-            0.333333333333333333333333333333,
-            0.306153985300332915214516914060,
-            0.300462606288665774426601772290,
-            0.289541991994981660261698764510,
-            0.286611652351681559449894454738,
-        ]
-
-        return values_to_reach[self.n_circles - 2]
+        return optimal_values[self.n_circles - 2]
 
     def run_evolution_strategies(
         self,
