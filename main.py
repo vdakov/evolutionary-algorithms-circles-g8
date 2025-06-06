@@ -28,7 +28,7 @@ from evopy.initializers import *
 # Original license stored in LICENSE file                 #
 #                                                         #
 # Install required dependencies with:                     #
-#       pip install -r requirements.dev.txt               #
+#       pip install -r requirements.txt               #
 #                                                         #
 ###########################################################
 

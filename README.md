@@ -49,9 +49,9 @@ The current implementation uses an Evolution Strategy (ES) algorithm with:
 python -m venv venv
 
 # On Windows:
-venv\Scripts\activate && pip install -r requirements.dev.txt
+venv\Scripts\activate && pip install -r requirements.txt
 # On Unix or MacOS:
-source venv/bin/activate && pip install -r requirements.dev.txt
+source venv/bin/activate && pip install -r requirements.txt
 ```
 
 #### Option 2: Using Conda
