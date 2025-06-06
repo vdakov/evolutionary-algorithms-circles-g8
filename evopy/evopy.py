@@ -117,7 +117,6 @@ class EvoPy:
         )[0].copy()
 
         for generation in range(self.generations):
-
             children_args = ()
 
             if self.recombination_strategy:

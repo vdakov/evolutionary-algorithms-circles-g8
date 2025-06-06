@@ -73,7 +73,7 @@ class Individual:
         return self.fitness
 
     def _reproduce_single_variance(
-        self, weights=None, population=None, reproduction_strategy=None
+        self, weights=None, population=None, reproduction_strategy=None, correlated_mutations=False
     ):
         """Create a single offspring individual from the set genotype and strategy parameters.
 
@@ -81,22 +81,24 @@ class Individual:
 
         :return: an individual which is the offspring of the current instance
         """
+        used_genotype, used_strategy_parameters = self.genotype, self.strategy_parameters
+
         if reproduction_strategy:
             recombination_params = (weights, population)
-            self.recombination(
+            used_genotype, used_strategy_parameters = self.recombination(
                 self.genotype,
                 self.strategy_parameters,
                 recombination_params,
                 reproduction_strategy=reproduction_strategy,
             )
 
-        new_genotype = self.genotype + self.strategy_parameters[0] * self.random.randn(
+        new_genotype = used_genotype + used_strategy_parameters[0] * self.random.randn(
             self.length
         )
         new_genotype = self.constraint_handling_func(self, new_genotype)
         scale_factor = self.random.randn() * np.sqrt(1 / (2 * self.length))
         new_parameters = [
-            max(self.strategy_parameters[0] * np.exp(scale_factor), self._EPSILON)
+            max(used_strategy_parameters[0] * np.exp(scale_factor), self._EPSILON)
         ]
         return Individual(
             new_genotype,
@@ -108,7 +110,7 @@ class Individual:
         )
 
     def _reproduce_multiple_variance(
-        self, weights=None, population=None, reproduction_strategy=None
+        self, weights=None, population=None, reproduction_strategy=None, correlated_mutations=False
     ):
         """Create a single offspring individual from the set genotype and strategy.
 
@@ -116,9 +118,19 @@ class Individual:
 
         :return: an individual which is the offspring of the current instance
         """
+        used_genotype, used_strategy_parameters = self.genotype, self.strategy_parameters
 
-        new_genotype = self.genotype + [
-            self.strategy_parameters[i] * self.random.randn()
+        if reproduction_strategy:
+            recombination_params = (weights, population)
+            used_genotype, used_strategy_parameters = self.recombination(
+                self.genotype,
+                self.strategy_parameters,
+                recombination_params,
+                reproduction_strategy=reproduction_strategy,
+            )
+
+        new_genotype = used_genotype + [
+            used_strategy_parameters[i] * self.random.randn()
             for i in range(self.length)
         ]
         new_genotype = self.constraint_handling_func(self, new_genotype)
@@ -136,15 +148,6 @@ class Individual:
             )
             for i in range(self.length)
         ]
-
-        if reproduction_strategy:
-            recombination_params = (weights, population)
-            self.recombination(
-                self.genotype,
-                self.strategy_parameters,
-                recombination_params,
-                reproduction_strategy=reproduction_strategy,
-            )
 
         return Individual(
             new_genotype,
@@ -166,22 +169,34 @@ class Individual:
         :return: an individual which is the offspring of the current instance
         """
 
+        used_genotype, used_strategy_parameters = self.genotype, self.strategy_parameters
+
+        if reproduction_strategy:
+            recombination_params = (weights, population)
+            used_genotype, used_strategy_parameters = self.recombination(
+                self.genotype,
+                self.strategy_parameters,
+                recombination_params,
+                reproduction_strategy=reproduction_strategy,
+            )
+
         global_scale_factor = self.random.randn() * np.sqrt(1 / (2 * self.length))
         scale_factors = [
             self.random.randn() * np.sqrt(1 / 2 * np.sqrt(self.length))
             for _ in range(self.length)
         ]
+
         new_variances = [
             max(
                 np.exp(global_scale_factor + scale_factors[i])
-                * self.strategy_parameters[i],
+                * used_strategy_parameters[i],
                 self._EPSILON,
             )
             for i in range(self.length)
         ]
         new_rotations = [
-            self.strategy_parameters[i] + self.random.randn() * self._BETA
-            for i in range(self.length, len(self.strategy_parameters))
+            used_strategy_parameters[i] + self.random.randn() * self._BETA
+            for i in range(self.length, len(used_strategy_parameters))
         ]
         new_rotations = [
             (
@@ -200,19 +215,10 @@ class Individual:
                 T_pq[p][q] = -np.sin(new_rotations[j])
                 T_pq[q][p] = -T_pq[p][q]
                 T = np.matmul(T, T_pq)
-        new_genotype = self.genotype + T @ self.random.randn(self.length)
+        new_genotype = used_genotype + T @ self.random.randn(self.length)
         new_genotype = self.constraint_handling_func(self, new_genotype)
 
         strategy_parameters = np.array(new_variances + new_rotations)
-
-        if reproduction_strategy:
-            recombination_params = (weights, population)
-            self.recombination(
-                new_genotype,
-                strategy_parameters,
-                recombination_params,
-                reproduction_strategy=reproduction_strategy,
-            )
 
         return Individual(
             new_genotype,
@@ -237,9 +243,7 @@ class Individual:
 
             x_new = (w_x) * x + aggregate_x * w_r
             strategy_parameters = (w_x) * strategy_parameters + aggregate_r * w_r
-            self.genotype = x_new
-            self.strategy_parameters = strategy_parameters
-            # print("Recombination using weighted strategy with weights:", weights)
+            return x_new, strategy_parameters
         elif reproduction_strategy == "intermediate":
             weights, population = recombination_params
 
@@ -257,10 +261,18 @@ class Individual:
                 sum_genotype += individual.genotype
                 # sum_strategy_parameters += individual.strategy_parameters
 
-            # Compute the average (centroid) and update self
-            self.genotype = sum_genotype / num_parents
-            # self.strategy_parameters = sum_strategy_parameters / num_parents
+            # Compute the average (centroid) and update
+            average_genotype = sum_genotype / num_parents
+            # average_strategy_parameters = sum_strategy_parameters / num_parents
+            return average_genotype, self.strategy_parameters
+        elif reproduction_strategy == "correlated_mutations":
+            _, population = recombination_params
 
+            # pick random individual to combine with
+            other_individual = population[self.random.randint(0, len(population))]
+            average_genotype = (self.genotype + other_individual.genotype) / 2.0
+            average_strategy_parameters = (self.strategy_parameters + other_individual.strategy_parameters) / 2.0
+            return average_genotype, average_strategy_parameters
         else:
             raise ValueError(f"Unknown recombination type: {reproduction_strategy}")
 

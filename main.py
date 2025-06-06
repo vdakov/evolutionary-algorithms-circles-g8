@@ -54,7 +54,7 @@ def parse_args():
     parser.add_argument(
         "--recombination_strategy",
         type=str,
-        choices=["weighted", "intermediate"],
+        choices=["weighted", "intermediate", "correlated_mutations"],
         default=None,
         help="Recombination strategy to use",
     )

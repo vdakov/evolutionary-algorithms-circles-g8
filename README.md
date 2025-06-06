@@ -30,6 +30,8 @@ The current implementation uses an Evolution Strategy (ES) algorithm with:
 
    - [x] Weighted Recombination
    - [x] Elitism
+   
+   - [x] Correlated Mutations
 
 2. Parameter Optimization
 
