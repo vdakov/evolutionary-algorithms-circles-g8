@@ -9,10 +9,10 @@ if __name__ == "__main__":
         param_to_overwrite="init_strategy",
         param_in_runner=False,
         n_circles=10,
-        n_runs=1,
+        n_runs=5,
         population_size=30,
         num_children=1,
-        generations=10,
+        generations=100,
     )
     # Print summary
     print("\nExperiment Results Summary:")
