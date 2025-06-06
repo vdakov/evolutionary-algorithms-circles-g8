@@ -14,6 +14,7 @@ from evopy.strategy import Strategy
 from evopy.constraint_handling import *
 from evopy.initializers import *
 from evopy.optimal_values import optimal_values
+from evopy.results_manager import ResultsManager
 
 
 def parse_args():
@@ -87,6 +88,9 @@ def parse_args():
         "--max_evals", type=int, default=1e5, help="Maximum number of evaluations"
     )
     parser.add_argument("--max_time", type=float, help="Maximum runtime in seconds")
+    parser.add_argument(
+        "--random_seed", type=int, help="Random seed for reproducibility"
+    )
     # Parse, convert, and validate arguments
     args = parser.parse_args()
     args.strategy = Strategy.from_string(args.strategy)
@@ -129,6 +133,7 @@ class CirclesInASquare:
         output_statistics=True,
         init_strategy=None,
         init_jitter=0.1,
+        results_manager=None,
     ):
         self.print_sols = print_sols
         self.output_statistics = output_statistics
@@ -139,6 +144,7 @@ class CirclesInASquare:
         self.ax = None
         self.init_strategy = init_strategy
         self.init_jitter = init_jitter
+        self.results_manager = results_manager
 
         assert 2 <= n_circles <= 20
 
@@ -210,6 +216,16 @@ class CirclesInASquare:
             self.fig.canvas.draw()
             self.fig.canvas.flush_events()
 
+        # Update results manager if available
+        if self.results_manager is not None:
+            self.results_manager.update_progress(
+                report.generation,
+                report.best_fitness,
+                report.avg_fitness,
+                report.std_fitness,
+                report.best_genotype,
+            )
+
     def get_target(self):
         return optimal_values[self.n_circles - 2]
 
@@ -224,7 +240,25 @@ class CirclesInASquare:
         max_run_time,
         recombination_strategy,
         elitism,
+        random_seed=None,
     ):
+        settings = {
+            "n_circles": self.n_circles,
+            "population_size": population_size,
+            "num_children": num_children,
+            "generations": generations,
+            "strategy": strategy.value,
+            "constraint_handling": constraint_handling_func.value,
+            "max_evaluations": max_evaluations,
+            "max_run_time": max_run_time,
+            "recombination_strategy": recombination_strategy,
+            "elitism": elitism,
+            "random_seed": random_seed,
+            "init_strategy": self.init_strategy.value,
+            "init_jitter": self.init_jitter,
+        }
+        self.results_manager.start_run(settings)
+
         callback = self.statistics_callback if self.output_statistics else None
 
         initial_population = np.asarray(
@@ -233,7 +267,7 @@ class CirclesInASquare:
                     self.n_circles,
                     bounds=(0, 1),
                     jitter=self.init_jitter,
-                    random_state=None,
+                    random_state=random_seed,
                 )
                 for _ in range(population_size)
             ]
@@ -253,9 +287,9 @@ class CirclesInASquare:
             population_size=population_size,
             num_children=num_children,
             strategy=strategy,
-            constraint_handling_func=constraint_handling_func,
+            constraint_handling_func=constraint_func_dispatch[args.constraint_handling],
             bounds=(0, 1),
-            random_seed=42,
+            random_seed=random_seed,
             target_fitness_value=self.get_target(),
             max_evaluations=max_evaluations,
             max_run_time=max_run_time,
@@ -271,29 +305,33 @@ class CirclesInASquare:
         plt.ioff()
         plt.show()  # Keep the plot open at the end
 
-        # TODO: Use reporter to print the best solution,
-        # as well as plot the final elbow plot and best population solution
+        # Save results
+        if self.results_manager is not None:
+            self.results_manager.save_results(best_solution, self.get_target())
+
         return best_solution
 
 
 if __name__ == "__main__":
     args = parse_args()
+    # Initialize runner
     runner = CirclesInASquare(
         n_circles=args.n_circles,
         print_sols=not args.skip_print,
         plot_sols=not args.skip_plot,
         init_strategy=args.init_strategy,
         init_jitter=args.init_jitter,
+        results_manager=ResultsManager(),
     )
     best = runner.run_evolution_strategies(
         population_size=args.population_size,
         num_children=args.num_children,
         generations=args.generations,
         strategy=args.strategy,
-        constraint_handling_func=constraint_func_dispatch[args.constraint_handling],
+        constraint_handling_func=args.constraint_handling,
         max_evaluations=args.max_evals,
         recombination_strategy=args.recombination_strategy,
         elitism=args.elitism,
         max_run_time=args.max_time,
+        random_seed=args.random_seed,
     )
-    # TODO: fetch dataset and compare with optimal solution
