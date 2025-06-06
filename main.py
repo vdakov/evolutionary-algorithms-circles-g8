@@ -51,15 +51,15 @@ def parse_args():
     )
     parser.add_argument(
         "--strategy",
-        type=Strategy.from_string,
-        choices=["single", "multiple", "full"],
+        type=str,
+        choices=["single", "multiple", "full"],  # Make sure these match your valid strategy strings
         default="single",
         help="Variance strategy (single/multiple/full)",
     )
     parser.add_argument(
         "--constraint_handling",
         type=ConstraintHandling.from_string,
-        choices=["BR", "CD", "RR"],
+        choices=[ConstraintHandling.BOUNDARY_REPAIR, ConstraintHandling.CONSTRAINT_DOMINATION, ConstraintHandling.RANDOM_REPAIR],
         default="BR",
         help="How to deal with out-of-bounds individuals: "
         "Boundary Repair (BD), Constraint domination (CD), or Random repair (RR)",
@@ -78,6 +78,13 @@ def parse_args():
         "--max_evals", type=int, default=1e5, help="Maximum number of evaluations"
     )
     parser.add_argument("--max_time", type=float, help="Maximum runtime in seconds")
+    
+    parser.add_argument("--elitism", type=bool, help="Elitism", default=False)
+    parser.add_argument("--recombination_strategy",type=str,
+        choices=["weighted","intermediate"],
+        default=None,
+        help="Recombination strategy to use",
+    )
     # Parse and verify
     args = parser.parse_args()
     if not 2 <= args.n_circles:
@@ -224,6 +231,8 @@ class CirclesInASquare:
         constraint_handling_func,
         max_evaluations,
         max_run_time,
+        recombination_strategy,
+        elitism,
     ):
         callback = self.statistics_callback if self.output_statistics else None
 
@@ -242,9 +251,12 @@ class CirclesInASquare:
             strategy=strategy,
             constraint_handling_func=constraint_handling_func,
             bounds=(0, 1),
+            random_seed=42,
             target_fitness_value=self.get_target(),
             max_evaluations=max_evaluations,
             max_run_time=max_run_time,
+            recombination_strategy=recombination_strategy,
+            elitism=elitism
         )
 
         best_solution = evopy.run()
@@ -278,5 +290,7 @@ if __name__ == "__main__":
         strategy=args.strategy,
         constraint_handling_func=constraint_func_dispatch[args.constraint_handling],
         max_evaluations=args.max_evals,
+        recombination_strategy=args.recombination_strategy,
+        elitism=args.elitism,
         max_run_time=args.max_time,
     )
