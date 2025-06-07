@@ -4,6 +4,7 @@ import numpy as np
 
 from evopy.individual import Individual
 from evopy.progress_report import ProgressReport
+from evopy.recombinations import RecombinationStrategy
 from evopy.strategy import Strategy
 from evopy.constraint_handling import run_random_repair
 from evopy.utils import random_with_seed
@@ -109,33 +110,39 @@ class EvoPy:
 
         start_time = time.time()
 
+        # Initialize population and evaluate fitness
         population = self._init_population()
-        best = sorted(
-            population,
-            reverse=self.maximize,
-            key=lambda individual: individual.evaluate(self.fitness_function),
-        )[0].copy()
-        best_ever = best.copy()
-
+        population_fitness = np.array(
+            [ind.evaluate(self.fitness_function) for ind in population]
+        )
+        # Track best solution
+        best_idx = (
+            np.argmax(population_fitness)
+            if self.maximize
+            else np.argmin(population_fitness)
+        )
+        best_ever = population[best_idx].copy()
+        # Main loop
         for generation in range(self.generations):
             children_args = ()
-
-            if self.recombination_strategy:
-                fitnesses = [
-                    individual.evaluate(self.fitness_function)
-                    for individual in population
-                ]
-                total_fitness = sum(fitnesses)
-                weights = np.divide(fitnesses, total_fitness)
+            if self.recombination_strategy != RecombinationStrategy.NONE.value:
+                # Normalize fitness for selection weights
+                if self.maximize:
+                    weights = population_fitness - np.min(population_fitness)
+                else:
+                    weights = np.max(population_fitness) - population_fitness
+                weights = (
+                    weights / np.sum(weights)
+                    if np.sum(weights) > 0
+                    else np.ones_like(weights) / len(weights)
+                )
                 children_args = (weights, population, self.recombination_strategy)
-
-            start_index = 0
-
-            if self.elitism:
-                start_index = 1
-                
-            if self.strategy == Strategy.CMA: 
-                assert self.remaining_population <= self.population_size, "CMA strategy requires lambd <= population_size"
+            # Generate offspring
+            children = []
+            if self.strategy == Strategy.CMA:
+                assert (
+                    self.remaining_population <= self.population_size
+                ), "CMA strategy requires lambd <= population_size"
                 children = Individual.reproduce_cma(
                     population,
                     self.population_size,
@@ -145,41 +152,43 @@ class EvoPy:
                     self.bounds,
                 )
             else:
-                children = [
-                    parent.reproduce(*children_args)
-                    for _ in range(self.num_children)
-                    for parent in population[start_index:]
-                ]
-
+                for parent in population:
+                    for _ in range(self.num_children):
+                        children.append(parent.reproduce(*children_args))
+            # Add elite if enabled
             if self.elitism:
                 children.append(best_ever.copy())
-
-            sorted_combined = sorted(
-                children,
-                reverse=self.maximize,
-                key=lambda individual: individual.evaluate(self.fitness_function),
+            # Evaluate children
+            children_fitness = np.array(
+                [child.evaluate(self.fitness_function) for child in children]
             )
-            best = population[0]
-
+            # Selection
             if self.maximize:
-                if best.fitness > best_ever.fitness:
-                    best_ever = best.copy()
-            else:  # Minimize
-                if best.fitness < best_ever.fitness:
-                    best_ever = best.copy()
+                sorted_indices = np.argsort(children_fitness)[::-1]
+            else:
+                sorted_indices = np.argsort(children_fitness)
+            # Update population
+            population = [children[i] for i in sorted_indices[: self.population_size]]
+            population_fitness = children_fitness[
+                sorted_indices[: self.population_size]
+            ]
+            # Update best ever
+            if (self.maximize and population_fitness[0] > best_ever.fitness) or (
+                not self.maximize and population_fitness[0] < best_ever.fitness
+            ):
+                best_ever = population[0].copy()
 
-            self.evaluations += len(population)
-            population = sorted_combined[: self.population_size]
-
+            self.evaluations += len(children)
+            # Report progress
             if self.reporter is not None:
-                mean = np.mean([x.fitness for x in population])
-                std = np.std([x.fitness for x in population])
+                mean = np.mean(population_fitness)
+                std = np.std(population_fitness)
                 self.reporter(
                     ProgressReport(
                         generation,
                         self.evaluations,
-                        best.genotype,
-                        best.fitness,
+                        population[0].genotype,
+                        population_fitness[0],
                         mean,
                         std,
                     )
@@ -203,7 +212,9 @@ class EvoPy:
                 )
             )
         elif self.strategy == Strategy.CMA:
-            strategy_parameters = None # No additional parameters needed for CMA strategy
+            strategy_parameters = (
+                None  # No additional parameters needed for CMA strategy
+            )
         else:
             raise ValueError(
                 "Provided strategy parameter was not an instance of Strategy"

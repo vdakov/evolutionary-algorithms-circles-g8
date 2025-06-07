@@ -1,5 +1,7 @@
 import matplotlib
 
+from evopy.recombinations import RecombinationStrategy
+
 matplotlib.use("Qt5Agg")
 
 import math
@@ -30,7 +32,10 @@ def parse_args():
         "--population_size", type=int, default=30, help="Population size"
     )
     parser.add_argument(
-        "--remaining_population_cma", type=int, default=10, help="Remaining population for CMA strategy"
+        "--remaining_population_cma",
+        type=int,
+        default=10,
+        help="Remaining population for CMA strategy",
     )
     parser.add_argument(
         "--num_children", type=int, default=1, help="Number of children per parent"
@@ -52,14 +57,14 @@ def parse_args():
         choices=[s.value for s in ConstraintHandling],
         default="RR",
         help="How to deal with out-of-bounds individuals: "
-        "Boundary Repair (BD), Constraint domination (CD), or Random repair (RR)",
+        "Boundary Repair (BR), Constraint domination (CD), or Random repair (RR)",
     )
     parser.add_argument("--elitism", action="store_true", help="Elitism")
     parser.add_argument(
         "--recombination_strategy",
         type=str,
-        choices=["weighted", "intermediate", "correlated_mutations"],
-        default=None,
+        choices=[r.value for r in RecombinationStrategy],
+        default=RecombinationStrategy.NONE.value,
         help="Recombination strategy to use",
     )
     parser.add_argument(
@@ -98,6 +103,9 @@ def parse_args():
     args = parser.parse_args()
     args.strategy = Strategy.from_string(args.strategy)
     args.constraint_handling = ConstraintHandling.from_string(args.constraint_handling)
+    args.recombination_strategy = RecombinationStrategy.from_string(
+        args.recombination_strategy
+    )
     args.init_strategy = InitializationStrategy.from_string(args.init_strategy)
     if not 2 <= args.n_circles:
         parser.error("Number of circles must be at least 2")
@@ -257,7 +265,7 @@ class CirclesInASquare:
             "constraint_handling": constraint_handling.value,
             "max_evaluations": max_evaluations,
             "max_run_time": max_run_time,
-            "recombination_strategy": recombination_strategy,
+            "recombination_strategy": recombination_strategy.value,
             "elitism": elitism,
             "init_strategy": self.init_strategy.value,
             "init_jitter": self.init_jitter,
@@ -299,7 +307,7 @@ class CirclesInASquare:
             target_fitness_value=self.get_target(),
             max_evaluations=max_evaluations,
             max_run_time=max_run_time,
-            recombination_strategy=recombination_strategy,
+            recombination_strategy=recombination_strategy.value,
             elitism=elitism,
             remaining_population_cma=self.remaining_population_cma,
         )

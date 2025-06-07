@@ -2,5 +2,4 @@ matplotlib
 numpy
 scikit-learn
 PyQt5
-PySide2
 pandas

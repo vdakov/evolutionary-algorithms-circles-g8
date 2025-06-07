@@ -1,15 +1,17 @@
 import numpy as np
-import math 
+from evopy.recombinations import RecombinationStrategy
 from evopy.strategy import Strategy
 from evopy.utils import random_with_seed
 
 
-COVARIANCE_MATRIX = None 
-MEAN = None 
-SIGMA = None # step size
-P = None  #evolution path
+COVARIANCE_MATRIX = None
+MEAN = None
+SIGMA = None  # step size
+P = None  # evolution path
+
+
 class Individual:
-    
+
     """The individual of the evolutionary strategy algorithm.
 
     This class handles the reproduction of the individual, using both the genotype and the specified
@@ -249,8 +251,7 @@ class Individual:
             self.constraint_handling_func,
             bounds=self.bounds,
         )
-        
-        
+
     @staticmethod
     def reproduce_cma(
         population,
@@ -260,119 +261,142 @@ class Individual:
         constraint_handling_func,
         bounds,
     ):
-        global COVARIANCE_MATRIX, MEAN, SIGMA, P 
+        global COVARIANCE_MATRIX, MEAN, SIGMA, P
         # Based on "The CMA Evolution Strategy: A Comparing Review" pp 75–102 https://link.springer.com/chapter/10.1007/3-540-32494-1_4
-        
+
         if COVARIANCE_MATRIX is None or MEAN is None or SIGMA is None:
-            xs = [x.genotype for x in population]  # Extract genotypes from the population
+            xs = [
+                x.genotype for x in population
+            ]  # Extract genotypes from the population
             MEAN = np.mean(xs[:mu], axis=0)  # Mean of the initial population
-            COVARIANCE_MATRIX = np.identity(MEAN.shape[0])  # Initial covariance matrix as identity
-            SIGMA = 1 
-            P = 0 
-        
-        xs = [MEAN + SIGMA * np.random.multivariate_normal(np.zeros(MEAN.shape[0]), COVARIANCE_MATRIX) for _ in range(lambd)]
-        next_population = [Individual(x, Strategy.CMA, None, None, bounds=bounds) for x in xs]  # Return the new population
+            COVARIANCE_MATRIX = np.identity(
+                MEAN.shape[0]
+            )  # Initial covariance matrix as identity
+            SIGMA = 1
+            P = 0
+
+        xs = [
+            MEAN
+            + SIGMA
+            * np.random.multivariate_normal(np.zeros(MEAN.shape[0]), COVARIANCE_MATRIX)
+            for _ in range(lambd)
+        ]
+        next_population = [
+            Individual(x, Strategy.CMA, None, None, bounds=bounds) for x in xs
+        ]  # Return the new population
         for x in next_population:
-            x.genotype = constraint_handling_func(x, x.genotype)  # Apply constraint handling to each individual
+            x.genotype = constraint_handling_func(
+                x, x.genotype
+            )  # Apply constraint handling to each individual
 
         evaluated = [(x, x.evaluate(fitness_function)) for x in next_population]
-        evaluated.sort(key=lambda tup: tup[1], reverse=True) 
+        evaluated.sort(key=lambda tup: tup[1], reverse=True)
 
         top_mu = evaluated[:mu]
         xs_top = np.array([ind.genotype for ind, _ in top_mu])
-        
+
         # Logarithmic ranking weights. By ranking what is meant is that it's not proportional to the fitness, but rather to the rank of the individual in the population.
         ranks = np.arange(1, mu + 1)
         weights = np.log(mu + 0.5) - np.log(ranks)
-        weights = weights / np.sum(weights) 
-                
+        weights = weights / np.sum(weights)
+
         # =========================== UPDATE STEP ===========================
         old_mean = MEAN.copy()
         n = MEAN.shape[0]
-        
+
         # Hyperparamters from online (current) and paramters from the cited paper. The second ones seemed to work boht
-        
+
         # mu_eff = 1 / np.sum(weights ** 2) # variance e #taken from cited paper
         # c_cov = 1.0 / (n**2 + mu_eff) # taken from cited paper
         # c_sigma = 1 / np.sqrt(n)
-        # d_sigma = 1 
+        # d_sigma = 1
         mu_eff = 1.0 / np.sum(weights**2)
-        c_sigma = (np.sqrt(mu_eff + 2) / (n + np.sqrt(mu_eff + 2)))
-        d_sigma = 1.0 + 2.0 * max(0, np.sqrt((mu_eff - 1)/(n+1)) - 1) + c_sigma
+        c_sigma = np.sqrt(mu_eff + 2) / (n + np.sqrt(mu_eff + 2))
+        d_sigma = 1.0 + 2.0 * max(0, np.sqrt((mu_eff - 1) / (n + 1)) - 1) + c_sigma
         c_cov = 4.0 / (n + 4.0)  # or 1/(dim**2+mu_eff), choose per variant
-        
 
-        
         MEAN = np.sum(weights[:, np.newaxis] * xs_top, axis=0)
         eigenvalues, _ = np.linalg.eigh(COVARIANCE_MATRIX)
         assert np.all(eigenvalues > 0), "Matrix must be positive definite."
-        
+
         # P = (1 - c_sigma) * P + np.sqrt(c_sigma * (2 - c_sigma) * mu_eff) * (Cg_inv_sqrt @ ((MEAN - old_mean) / SIGMA))
         C_inv_sqrt = np.linalg.inv(np.linalg.cholesky(COVARIANCE_MATRIX))
         step = (MEAN - old_mean) / SIGMA
-        P = (1 - c_sigma)*P + np.sqrt(c_sigma*(2-c_sigma)*mu_eff) * (C_inv_sqrt @ step)
+        P = (1 - c_sigma) * P + np.sqrt(c_sigma * (2 - c_sigma) * mu_eff) * (
+            C_inv_sqrt @ step
+        )
         # Rank Mu update, combined with the evolution path (from paper)
         COVARIANCE_MATRIX = (
-            (1 - c_cov) * COVARIANCE_MATRIX + (c_cov / mu_eff) * np.outer(P, P) + # Information from the previous covariance matrices 
-            c_cov  * (1 - 1 / mu_eff) * np.sum([weights[i] * np.outer((xs_top[i] - old_mean) / SIGMA , (xs_top[i] - old_mean) / SIGMA) for i in range(mu)], axis=0) # Current covariances matrix 
+            (1 - c_cov) * COVARIANCE_MATRIX
+            + (c_cov / mu_eff) * np.outer(P, P)
+            + c_cov  # Information from the previous covariance matrices
+            * (1 - 1 / mu_eff)
+            * np.sum(
+                [
+                    weights[i]
+                    * np.outer(
+                        (xs_top[i] - old_mean) / SIGMA, (xs_top[i] - old_mean) / SIGMA
+                    )
+                    for i in range(mu)
+                ],
+                axis=0,
+            )  # Current covariances matrix
         )
-        
-        SIGMA = SIGMA * np.exp((c_sigma / d_sigma) * ((np.linalg.norm(P) / Individual.expected_norm(n)) - 1)) 
-        SIGMA = max(min(SIGMA, 1.0), 1e-8) # clipping the step size to avoid numerical issues
-    
+
+        SIGMA = SIGMA * np.exp(
+            (c_sigma / d_sigma)
+            * ((np.linalg.norm(P) / Individual.expected_norm(n)) - 1)
+        )
+        SIGMA = max(
+            min(SIGMA, 1.0), 1e-8
+        )  # clipping the step size to avoid numerical issues
+
         return next_population
-    
+
     @staticmethod
     def expected_norm(n):
-        return np.sqrt(n) * (1.0 - 1.0/(4.0*n) + 1.0/(21.0*(n**2)))
-        
-        
-    
-    def recombination(self, x, strategy_parameters, recombination_params, reproduction_strategy): 
-        if reproduction_strategy == "weighted":
-            weights, population = recombination_params
-            w_x = 0.7
-            w_r = 0.3
-            aggregate_x = np.zeros(x.shape)
-            aggregate_r = np.zeros(strategy_parameters.shape)
-            for i, individual in enumerate(population):
-                aggregate_x += individual.genotype * weights[i]
-                aggregate_r += individual.strategy_parameters * weights[i]
+        return np.sqrt(n) * (1.0 - 1.0 / (4.0 * n) + 1.0 / (21.0 * (n**2)))
 
-            x_new = (w_x) * x + aggregate_x * w_r
-            strategy_parameters = (w_x) * strategy_parameters + aggregate_r * w_r
-            return x_new, strategy_parameters
-        elif reproduction_strategy == "intermediate":
-            weights, population = recombination_params
-
+    def recombination(
+        self, x, strategy_parameters, recombination_params, reproduction_strategy
+    ):
+        weights, population = recombination_params
+        if reproduction_strategy == RecombinationStrategy.WEIGHTED.value:
+            w_x = 0.7  # Weight for current individual
+            w_r = 0.3  # Weight for population influence
+            # Compute weighted sum using numpy for efficiency
+            pop_genotypes = np.array([ind.genotype for ind in population])
+            pop_strategies = np.array([ind.strategy_parameters for ind in population])
+            aggregate_x = np.sum(pop_genotypes * weights[:, np.newaxis], axis=0)
+            aggregate_r = np.sum(pop_strategies * weights[:, np.newaxis], axis=0)
+            x_new = w_x * x + w_r * aggregate_x
+            strategy_parameters_new = w_x * strategy_parameters + w_r * aggregate_r
+            return x_new, strategy_parameters_new
+        elif reproduction_strategy == RecombinationStrategy.INTERMEDIATE.value:
             if not population:
-                return  # Nothing to recombine if no parents provided
-
-            num_parents = len(population)
-
-            # Initialize sums for genotype and strategy parameters
-            sum_genotype = np.zeros(x.shape)
-            # sum_strategy_parameters = np.zeros(self.strategy_parameters.shape)
-
-            # Sum up all parent contributions
-            for individual in population:
-                sum_genotype += individual.genotype
-                # sum_strategy_parameters += individual.strategy_parameters
-
-            # Compute the average (centroid) and update
-            average_genotype = sum_genotype / num_parents
-            # average_strategy_parameters = sum_strategy_parameters / num_parents
-            return average_genotype, self.strategy_parameters
-        elif reproduction_strategy == "correlated_mutations":
-            _, population = recombination_params
-
-            # pick random individual to combine with
+                return x, strategy_parameters
+            # Efficient intermediate recombination using numpy
+            pop_genotypes = np.array([ind.genotype for ind in population])
+            average_genotype = np.mean(pop_genotypes, axis=0)
+            # Keep strategy parameters from parent to maintain adaptation
+            return average_genotype, strategy_parameters
+        elif reproduction_strategy == RecombinationStrategy.CORRELATED_MUTATIONS.value:
+            # Improved correlated mutation with random parent selection
             other_individual = population[self.random.randint(0, len(population))]
-            average_genotype = (self.genotype + other_individual.genotype) / 2.0
-            average_strategy_parameters = (
-                self.strategy_parameters + other_individual.strategy_parameters
-            ) / 2.0
-            return average_genotype, average_strategy_parameters
+            # Adaptive mixing based on fitness difference
+            if self.fitness is not None and other_individual.fitness is not None:
+                # More weight to better parent
+                alpha = 0.5 + 0.3 * (
+                    1 if self.fitness > other_individual.fitness else -1
+                )
+            else:
+                alpha = 0.5
+            x_new = alpha * x + (1 - alpha) * other_individual.genotype
+            strategy_parameters_new = (
+                alpha * strategy_parameters
+                + (1 - alpha) * other_individual.strategy_parameters
+            )
+            return x_new, strategy_parameters_new
         else:
             raise ValueError(f"Unknown recombination type: {reproduction_strategy}")
 

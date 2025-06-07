@@ -1,3 +1,4 @@
+from evopy.recombinations import RecombinationStrategy
 from experiments import run_single_comparison, run_single_comparison_with_elitism
 from evopy.initializers import InitializationStrategy
 
@@ -5,10 +6,10 @@ if __name__ == "__main__":
     # Run experiment
     # results, analysis = run_single_comparison(
     results, analysis = run_single_comparison_with_elitism(
-        "Initialization Scheme",
-        options=[s for s in InitializationStrategy],
-        param_to_overwrite="init_strategy",
-        param_in_runner=False,
+        "Recombination Strategy",
+        options=[r for r in RecombinationStrategy],
+        param_to_overwrite="recombination_strategy",
+        param_in_runner=True,
         n_circles=10,
         n_runs=5,
         population_size=30,

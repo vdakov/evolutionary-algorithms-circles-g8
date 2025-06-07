@@ -1,19 +1,19 @@
 from experiments import run_single_comparison, run_single_comparison_with_elitism
-from evopy.initializers import InitializationStrategy
+from evopy.constraint_handling import ConstraintHandling
 
 if __name__ == "__main__":
     # Run experiment
     # results, analysis = run_single_comparison(
     results, analysis = run_single_comparison_with_elitism(
-        "Initialization Scheme",
-        options=[s for s in InitializationStrategy],
-        param_to_overwrite="init_strategy",
-        param_in_runner=False,
+        "Constraint Handling",
+        options=[ConstraintHandling("RR"), ConstraintHandling("BR")],
+        param_to_overwrite="constraint_handling",
+        param_in_runner=True,
         n_circles=10,
         n_runs=5,
         population_size=30,
         num_children=1,
-        generations=100,
+        generations=500,
     )
     # Print summary
     print("\nExperiment Results Summary:")
