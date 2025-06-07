@@ -247,50 +247,43 @@ class Individual:
     def recombination(
         self, x, strategy_parameters, recombination_params, reproduction_strategy
     ):
+        weights, population = recombination_params
         if reproduction_strategy == RecombinationStrategy.WEIGHTED.value:
-            weights, population = recombination_params
-            w_x = 0.7
-            w_r = 0.3
-            aggregate_x = np.zeros(x.shape)
-            aggregate_r = np.zeros(strategy_parameters.shape)
-            for i, individual in enumerate(population):
-                aggregate_x += individual.genotype * weights[i]
-                aggregate_r += individual.strategy_parameters * weights[i]
-
-            x_new = (w_x) * x + aggregate_x * w_r
-            strategy_parameters = (w_x) * strategy_parameters + aggregate_r * w_r
-            return x_new, strategy_parameters
+            w_x = 0.7  # Weight for current individual
+            w_r = 0.3  # Weight for population influence
+            # Compute weighted sum using numpy for efficiency
+            pop_genotypes = np.array([ind.genotype for ind in population])
+            pop_strategies = np.array([ind.strategy_parameters for ind in population])
+            aggregate_x = np.sum(pop_genotypes * weights[:, np.newaxis], axis=0)
+            aggregate_r = np.sum(pop_strategies * weights[:, np.newaxis], axis=0)
+            x_new = w_x * x + w_r * aggregate_x
+            strategy_parameters_new = w_x * strategy_parameters + w_r * aggregate_r
+            return x_new, strategy_parameters_new
         elif reproduction_strategy == RecombinationStrategy.INTERMEDIATE.value:
-            weights, population = recombination_params
-
             if not population:
-                return  # Nothing to recombine if no parents provided
-
-            num_parents = len(population)
-
-            # Initialize sums for genotype and strategy parameters
-            sum_genotype = np.zeros(x.shape)
-            # sum_strategy_parameters = np.zeros(self.strategy_parameters.shape)
-
-            # Sum up all parent contributions
-            for individual in population:
-                sum_genotype += individual.genotype
-                # sum_strategy_parameters += individual.strategy_parameters
-
-            # Compute the average (centroid) and update
-            average_genotype = sum_genotype / num_parents
-            # average_strategy_parameters = sum_strategy_parameters / num_parents
-            return average_genotype, self.strategy_parameters
+                return x, strategy_parameters
+            # Efficient intermediate recombination using numpy
+            pop_genotypes = np.array([ind.genotype for ind in population])
+            average_genotype = np.mean(pop_genotypes, axis=0)
+            # Keep strategy parameters from parent to maintain adaptation
+            return average_genotype, strategy_parameters
         elif reproduction_strategy == RecombinationStrategy.CORRELATED_MUTATIONS.value:
-            _, population = recombination_params
-
-            # pick random individual to combine with
+            # Improved correlated mutation with random parent selection
             other_individual = population[self.random.randint(0, len(population))]
-            average_genotype = (self.genotype + other_individual.genotype) / 2.0
-            average_strategy_parameters = (
-                self.strategy_parameters + other_individual.strategy_parameters
-            ) / 2.0
-            return average_genotype, average_strategy_parameters
+            # Adaptive mixing based on fitness difference
+            if self.fitness is not None and other_individual.fitness is not None:
+                # More weight to better parent
+                alpha = 0.5 + 0.3 * (
+                    1 if self.fitness > other_individual.fitness else -1
+                )
+            else:
+                alpha = 0.5
+            x_new = alpha * x + (1 - alpha) * other_individual.genotype
+            strategy_parameters_new = (
+                alpha * strategy_parameters
+                + (1 - alpha) * other_individual.strategy_parameters
+            )
+            return x_new, strategy_parameters_new
         else:
             raise ValueError(f"Unknown recombination type: {reproduction_strategy}")
 
