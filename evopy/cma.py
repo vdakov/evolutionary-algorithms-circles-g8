@@ -1,6 +1,6 @@
 """CMA-ES (Covariance Matrix Adaptation Evolution Strategy) implementation.
 
-Based on "The CMA Evolution Strategy: A Comparing Review" pp 75–102
+Based on "The CMA Evolution Strategy: A Comparing Review" pp 75-102
 https://link.springer.com/chapter/10.1007/3-540-32494-1_4
 """
 
@@ -49,8 +49,7 @@ class CMAState:
         if self.mean is None:
             xs = np.array([x.genotype for x in population])
             self.mean = np.mean(xs[: self.mu], axis=0)
-
-        # Generate new samples using current distribution
+        # Generate new samples using current distribution, Equation 2
         xs = [
             self.mean
             + self.sigma
@@ -59,7 +58,6 @@ class CMAState:
             )
             for _ in range(lambd)
         ]
-
         # Create and evaluate new individuals
         next_population = [
             Individual(
@@ -74,13 +72,10 @@ class CMAState:
         ]
         for x in next_population:
             x.genotype = constraint_handling_func(x, x.genotype)
-
         evaluated = [(x, x.evaluate(fitness_function)) for x in next_population]
         evaluated.sort(key=lambda tup: tup[1], reverse=True)
-
-        top_mu = evaluated[: self.mu]
-        xs_top = np.array([ind.genotype for ind, _ in top_mu])
-
+        # Select the best mu individuals
+        xs_top = np.array([ind.genotype for ind, _ in evaluated[: self.mu]])
         # Calculate weights for ranked individuals
         ranks = np.arange(1, self.mu + 1)
         weights = np.log(self.mu + 0.5) - np.log(ranks)
@@ -89,32 +84,31 @@ class CMAState:
         # === Update CMA-ES state ===
         old_mean = self.mean.copy()
         n = self.mean.shape[0]
+        # Variance effective selection mass, Equation 5
+        mu_eff = 1.0 / np.sum(weights**2)
 
-        # Update hyperparameters
-        mu_eff = 1.0 / np.sum(weights**2)  # Variance effective selection mass
-        c_sigma = np.sqrt(mu_eff + 2) / (
-            n + np.sqrt(mu_eff + 2)
-        )  # Learning rate for step size
-        d_sigma = (
-            1.0 + 2.0 * max(0, np.sqrt((mu_eff - 1) / (n + 1)) - 1) + c_sigma
-        )  # Damping for step size
-        c_cov = 4.0 / (n + 4.0)  # Learning rate for covariance matrix
+        # Default parameters for CMA-ES, Table 2
+        # Learning rate for step size
+        c_sigma = np.sqrt(mu_eff + 2) / (n + np.sqrt(mu_eff + 2))
+        # Damping for step size
+        d_sigma = 1.0 + 2.0 * max(0, np.sqrt((mu_eff - 1) / (n + 1)) - 1) + c_sigma
+        # Learning rate for covariance matrix
+        c_cov = 4.0 / (n + 4.0)
 
-        # Update mean
+        # Update mean, Equation 4
         self.mean = np.sum(weights[:, np.newaxis] * xs_top, axis=0)
-
         # Ensure positive definiteness
         eigenvalues, _ = np.linalg.eigh(self.covariance_matrix)
         assert np.all(eigenvalues > 0), "Covariance matrix must be positive definite"
 
-        # Update evolution path and covariance matrix
+        # Update evolution path, Equation 17
         C_inv_sqrt = np.linalg.inv(np.linalg.cholesky(self.covariance_matrix))
         step = (self.mean - old_mean) / self.sigma
         self.evolution_path = (1 - c_sigma) * self.evolution_path + np.sqrt(
             c_sigma * (2 - c_sigma) * mu_eff
         ) * (C_inv_sqrt @ step)
 
-        # Rank-μ update combined with evolution path
+        # Rank-μ update combined with evolution path, Equation 22
         self.covariance_matrix = (
             (1 - c_cov) * self.covariance_matrix
             + (c_cov / mu_eff)  # Decay of old matrix
@@ -134,7 +128,7 @@ class CMAState:
             )
         )
 
-        # Update step size using evolution path length
+        # Update step size using evolution path length, Equation 28
         self.sigma = self.sigma * np.exp(
             (c_sigma / d_sigma)
             * ((np.linalg.norm(self.evolution_path) / expected_norm(n)) - 1)
@@ -146,6 +140,6 @@ class CMAState:
 
 
 def expected_norm(n):
-    """Calculate the expected norm of a n-dimensional normal distribution.
-    Used for step size adaptation in CMA-ES."""
+    """Calculate the expected norm of a n-dimensional normal distribution
+    for step size adaptation. Uses Taylor expansion, 2nd order"""
     return np.sqrt(n) * (1.0 - 1.0 / (4.0 * n) + 1.0 / (21.0 * (n**2)))

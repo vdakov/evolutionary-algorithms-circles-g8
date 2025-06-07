@@ -24,6 +24,12 @@ def parse_args():
         "--population_size", type=int, default=30, help="Population size"
     )
     parser.add_argument(
+        "--remaining_population_factor_cma",
+        type=int,
+        default=2,
+        help="A fraction of the population that will remain for the CMA strategy. 2 = half of the population",
+    )
+    parser.add_argument(
         "--num_children", type=int, default=1, help="Number of children per parent"
     )
     parser.add_argument(
@@ -97,7 +103,6 @@ def parse_args():
     parser_args.init_strategy = InitializationStrategy.from_string(
         parser_args.init_strategy
     )
-
     return parser_args
 
 
@@ -111,6 +116,7 @@ if __name__ == "__main__":
         plot_sols=not args.skip_plot,
         init_jitter=args.init_jitter,
         results_manager=ResultsManager(),
+        remaining_population_factor_cma=args.remaining_population_factor_cma,
         random_seed=args.random_seed,
     )
     best = runner.run_evolution_strategies(
