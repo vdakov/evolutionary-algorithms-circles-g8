@@ -3,5 +3,5 @@ ES.pdf
 .vscode
 AMaLGam
 __pycache__
-outputs
+**/outputs/**
 !outputs/.gitkeep
