@@ -13,8 +13,15 @@ from main import CirclesInASquare
 
 
 def create_defaults(
-    n_circles, population_size, num_children, generations, results_manager
+    n_circles: int,
+    population_size: int,
+    num_children: int,
+    generations: int,
+    results_manager: ResultsManager,
 ):
+    """
+    Creates default parameters for the evolutionary algorithm.
+    """
     circles_defaults = {
         "n_circles": n_circles,
         "print_sols": False,
@@ -93,7 +100,7 @@ def run_experiments(
 
 
 def analyze_and_plot_results(
-    results, options, result_dir, option_name, param_to_overwrite, with_elitism=False
+    results, options, result_dir, title, param_to_overwrite, with_elitism=False
 ):
     os.makedirs(result_dir, exist_ok=True)
 
@@ -122,7 +129,7 @@ def analyze_and_plot_results(
     labels = [str(key) for key in results]
     plt.boxplot(data, tick_labels=labels)
     plt.axhline(y=target, color="r", linestyle="--", label="Target Value")
-    plt.title(f"{option_name.capitalize()} Comparison")
+    plt.title(f"{title.capitalize()} Comparison")
     plt.ylabel("Best Fitness Achieved")
     plt.legend()
     plt.grid(True)
@@ -132,7 +139,7 @@ def analyze_and_plot_results(
     # Elbow plot
     plot_combined_elbow(
         results,
-        option_name,
+        title,
         list(results.keys()),
         os.path.join(result_dir, f"{param_to_overwrite}_progression.png"),
     )
@@ -140,19 +147,51 @@ def analyze_and_plot_results(
     return analysis
 
 
+def print_summary(analysis):
+    """
+    Print a summary of the analysis result
+    @param analysis: analysis results
+    """
+    print()
+    print("Experiment Results Summary:")
+    print("==========================")
+    for init, stats in analysis.items():
+        if init == "seeds":
+            continue
+        print(f"\nScheme: {init}")
+        print(f"Mean Fitness: {stats['mean_fitness']:.6f} ± {stats['std_fitness']:.6f}")
+        print(f"Best Fitness: {stats['best_fitness']:.6f}")
+
+
 def run_comparison(
-    option_name,
-    options,
-    param_to_overwrite,
-    param_in_runner=True,
-    n_circles=10,
-    n_runs=5,
-    population_size=30,
-    num_children=1,
-    generations=1000,
-    random_seeds=None,
-    with_elitism=False,
+    title: str,
+    options: list | np.ndarray,
+    param_to_overwrite: str,
+    param_in_runner: bool = True,
+    n_circles: int = 10,
+    n_runs: int = 5,
+    population_size: int = 30,
+    num_children: int = 1,
+    generations: int = 1000,
+    random_seeds: np.ndarray = None,
+    with_elitism: bool = False,
 ):
+    """
+    Runs a comparison between a list of options. For each option, n_runs are performed each with num_generations.
+    The results are then saved to the output directory.
+    @param title: Name of the options to compare. For example: Initialization Scheme
+    @param options: The different options to run the experiment
+    @param param_to_overwrite: Name of the parameter that has to be replaced by each of the options
+    @param param_in_runner: Whether the parameter is in the circles or evolution parameters
+    @param n_circles: Number of circles to run
+    @param n_runs: Number of runs to run for each option
+    @param population_size: Size of the population for each option and run
+    @param num_children: Number of children for each option and run
+    @param generations: Number of generations for each option and run
+    @param random_seeds: An array of random seeds
+    @param with_elitism: Whether to run the experiments with elitism
+    @return: The results and the analysis that was used to plot.
+    """
     if random_seeds is None:
         random_seeds = np.random.randint(0, 1000000, size=n_runs)
 
@@ -177,9 +216,10 @@ def run_comparison(
         results,
         options,
         results_manager.run_dir,
-        option_name,
+        title,
         param_to_overwrite,
         with_elitism=with_elitism,
     )
 
-    return results, analysis
+    print_summary(analysis)
+    return results

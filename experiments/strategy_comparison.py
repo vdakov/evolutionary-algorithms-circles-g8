@@ -14,12 +14,3 @@ if __name__ == "__main__":
         generations=100,
         with_elitism=False,
     )
-    # Print summary
-    print("\nExperiment Results Summary:")
-    print("==========================")
-    for strategy, stats in analysis.items():
-        if strategy == "seeds":
-            continue
-        print(f"\nStrategy: {strategy}")
-        print(f"Mean Fitness: {stats['mean_fitness']:.6f} ± {stats['std_fitness']:.6f}")
-        print(f"Best Fitness: {stats['best_fitness']:.6f}")

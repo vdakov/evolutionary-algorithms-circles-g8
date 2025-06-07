@@ -1,6 +1,5 @@
 from evopy.recombinations import RecombinationStrategy
 from experiments import run_comparison
-from evopy.initializers import InitializationStrategy
 
 if __name__ == "__main__":
     # Run experiment
@@ -17,12 +16,3 @@ if __name__ == "__main__":
         generations=100,
         with_elitism=True,
     )
-    # Print summary
-    print("\nExperiment Results Summary:")
-    print("==========================")
-    for init, stats in analysis.items():
-        if init == "seeds":
-            continue
-        print(f"\nInitialization Scheme: {init}")
-        print(f"Mean Fitness: {stats['mean_fitness']:.6f} ± {stats['std_fitness']:.6f}")
-        print(f"Best Fitness: {stats['best_fitness']:.6f}")
