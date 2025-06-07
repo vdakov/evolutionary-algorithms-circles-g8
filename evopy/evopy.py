@@ -129,9 +129,8 @@ class EvoPy:
                 children_args = (weights, population, self.recombination_strategy)
 
             start_index = 0
-
-            if self.elitism:
-                start_index = 1
+            # if self.elitism:
+            # start_index = 1
 
             children = [
                 parent.reproduce(*children_args)
