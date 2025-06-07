@@ -3,7 +3,7 @@ import matplotlib
 import numpy as np
 
 
-def plot_combined_elbow(results, option_name, options, save_path):
+def plot_combined_elbow(results, title, options, save_path):
     """Create an enhanced elbow plot showing progression of all options.
     For each option:
     - Solid line shows mean performance across runs
@@ -58,7 +58,7 @@ def plot_combined_elbow(results, option_name, options, save_path):
             generations, min_progression, max_progression, color=colors[idx], alpha=0.2
         )
     # Scaffold
-    plt.title(f"{option_name.capitalize()} Progression Comparison")
+    plt.title(f"{title.capitalize()} Progression Comparison")
     plt.xlabel("Generation")
     plt.ylabel("Best Fitness")
     plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")

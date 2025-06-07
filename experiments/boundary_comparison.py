@@ -1,10 +1,10 @@
-from experiments import run_single_comparison, run_single_comparison_with_elitism
+from experiments import run_comparison
 from evopy.constraint_handling import ConstraintHandling
 
 if __name__ == "__main__":
     # Run experiment
     # results, analysis = run_single_comparison(
-    results, analysis = run_single_comparison_with_elitism(
+    results, analysis = run_comparison(
         "Constraint Handling",
         options=[ConstraintHandling("RR"), ConstraintHandling("BR")],
         param_to_overwrite="constraint_handling",
@@ -15,12 +15,3 @@ if __name__ == "__main__":
         num_children=1,
         generations=500,
     )
-    # Print summary
-    print("\nExperiment Results Summary:")
-    print("==========================")
-    for init, stats in analysis.items():
-        if init == "seeds":
-            continue
-        print(f"\nInitialization Scheme: {init}")
-        print(f"Mean Fitness: {stats['mean_fitness']:.6f} ± {stats['std_fitness']:.6f}")
-        print(f"Best Fitness: {stats['best_fitness']:.6f}")
