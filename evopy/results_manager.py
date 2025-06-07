@@ -10,7 +10,7 @@ class ResultsManager:
     """Class for managing and storing experiment results."""
 
     def __init__(self, experiment_name=None, save_files=True):
-        """Initialize the results manager.
+        """Initialize the results' manager.
 
         Args:
             experiment_name: Optional name for the experiment. If None, uses timestamp.

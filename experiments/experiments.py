@@ -9,7 +9,7 @@ from evopy.initializers import InitializationStrategy
 from evopy.results_manager import ResultsManager
 from evopy.recombinations import RecombinationStrategy
 from evopy.utils.combined_elbow import plot_combined_elbow
-from main import CirclesInASquare
+from problem_runner import CirclesInASquare
 
 
 def create_defaults(
@@ -24,9 +24,10 @@ def create_defaults(
     """
     circles_defaults = {
         "n_circles": n_circles,
+        "init_strategy": InitializationStrategy.RANDOM,
         "print_sols": False,
         "plot_sols": False,
-        "init_strategy": InitializationStrategy.RANDOM,
+        # "output_statistics": False,
         "init_jitter": 0.1,
         "results_manager": results_manager,
         "random_seed": None,
