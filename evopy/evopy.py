@@ -32,6 +32,7 @@ class EvoPy:
         bounds=None,
         recombination_strategy=None,
         elitism=True,
+        remaining_population_cma=None,
     ):
         """Initializes an EvoPy instance.
 
@@ -73,6 +74,7 @@ class EvoPy:
         self.evaluations = 0
         self.recombination_strategy = recombination_strategy
         self.elitism = elitism
+        self.remaining_population = remaining_population_cma
 
     def _check_early_stop(self, start_time, best):
         """Check whether the algorithm can stop early, based on time and fitness target.
@@ -133,10 +135,11 @@ class EvoPy:
                 start_index = 1
                 
             if self.strategy == Strategy.CMA: 
+                assert self.remaining_population <= self.population_size, "CMA strategy requires lambd <= population_size"
                 children = Individual.reproduce_cma(
                     population,
                     self.population_size,
-                    self.population_size // 3,
+                    self.remaining_population,
                     self.fitness_function,
                     self.constraint_handling_func,
                     self.bounds,

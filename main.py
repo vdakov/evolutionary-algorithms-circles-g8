@@ -30,6 +30,9 @@ def parse_args():
         "--population_size", type=int, default=30, help="Population size"
     )
     parser.add_argument(
+        "--remaining_population_cma", type=int, default=10, help="Remaining population for CMA strategy"
+    )
+    parser.add_argument(
         "--num_children", type=int, default=1, help="Number of children per parent"
     )
     parser.add_argument(
@@ -147,6 +150,7 @@ class CirclesInASquare:
         self.init_jitter = init_jitter
         self.results_manager = results_manager
         self.random_seed = random_seed
+        self.remaining_population_cma = 10
 
         assert 2 <= n_circles <= 20
 
@@ -257,6 +261,7 @@ class CirclesInASquare:
             "elitism": elitism,
             "init_strategy": self.init_strategy.value,
             "init_jitter": self.init_jitter,
+            "remaining_population_cma": self.remaining_population_cma,
         }
         self.results_manager.start_run(settings)
 
@@ -296,6 +301,7 @@ class CirclesInASquare:
             max_run_time=max_run_time,
             recombination_strategy=recombination_strategy,
             elitism=elitism,
+            remaining_population_cma=self.remaining_population_cma,
         )
 
         best_solution = evopy.run()
