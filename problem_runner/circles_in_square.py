@@ -10,20 +10,23 @@ from evopy import (
     constraint_func_dispatch,
     InitializationStrategy,
     ResultsManager,
+    Strategy,
 )
 from evopy.optimal_values import optimal_values
+from evopy.cma import CMAState
 
 
 class CirclesInASquare:
     def __init__(
         self,
-        n_circles: int,
-        init_strategy: InitializationStrategy,
-        print_sols: bool = True,
-        plot_sols: bool = True,
-        output_statistics: bool = True,
+        n_circles,
+        print_sols=True,
+        plot_sols=True,
+        output_statistics=True,
+        init_strategy=None,
         init_jitter=0.1,
-        results_manager: ResultsManager = ResultsManager(),
+        results_manager=None,
+        remaining_population_factor_cma=3,
         random_seed=None,
     ):
         self.print_sols = print_sols
@@ -36,9 +39,10 @@ class CirclesInASquare:
         self.init_strategy = init_strategy
         self.init_jitter = init_jitter
         self.results_manager = results_manager
+        self.remaining_population_factor_cma = remaining_population_factor_cma
         self.random_seed = random_seed
 
-        assert 2 <= n_circles <= 20
+        assert 2 <= n_circles <= 30
 
         if self.plot_best_sol:
             self.set_up_plot()
@@ -132,8 +136,10 @@ class CirclesInASquare:
         max_run_time,
         recombination_strategy,
         elitism,
-        random_seed=None,
     ):
+        remaining_population_cma = int(
+            population_size / self.remaining_population_factor_cma
+        )
         settings = {
             "n_circles": self.n_circles,
             "population_size": population_size,
@@ -147,6 +153,8 @@ class CirclesInASquare:
             "elitism": elitism,
             "init_strategy": self.init_strategy.value,
             "init_jitter": self.init_jitter,
+            "remaining_population_cma": remaining_population_cma,
+            "random_seed": self.random_seed,
         }
         self.results_manager.start_run(settings)
 
@@ -186,6 +194,15 @@ class CirclesInASquare:
             max_run_time=max_run_time,
             recombination_strategy=recombination_strategy.value,
             elitism=elitism,
+            cma_state=(
+                CMAState(
+                    self.n_circles * 2,
+                    remaining_population_cma,
+                    self.random_seed,
+                )
+                if strategy == Strategy.CMA
+                else None
+            ),
         )
 
         best_solution = evopy.run()
