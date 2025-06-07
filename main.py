@@ -49,7 +49,7 @@ def parse_args():
         choices=[s.value for s in ConstraintHandling],
         default="RR",
         help="How to deal with out-of-bounds individuals: "
-        "Boundary Repair (BD), Constraint domination (CD), or Random repair (RR)",
+        "Boundary Repair (BR), Constraint domination (CD), or Random repair (RR)",
     )
     parser.add_argument("--elitism", action="store_true", help="Elitism")
     parser.add_argument(
