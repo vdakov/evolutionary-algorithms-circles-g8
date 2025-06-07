@@ -10,7 +10,7 @@ def random_with_seed(seed):
     """
     if seed is None:
         return np.random.mtrand._rand
-    if isinstance(seed, int):
+    if isinstance(seed, int) or isinstance(seed, np.int32):
         return np.random.RandomState(seed)
     if isinstance(seed, np.random.RandomState):
         return seed

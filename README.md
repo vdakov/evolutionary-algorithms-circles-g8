@@ -10,30 +10,38 @@ This repository contains an implementation of an Evolution Strategy algorithm to
 - Todor Slavov
 - Ivo Yordanov
 
-## Current Implementation
+## Baseline
 
-The current implementation uses an Evolution Strategy (ES) algorithm with:
+We use the Evolution Strategy (ES) algorithm with:
 
 - Multiple strategy variants (single variance, multiple variance, full variance)
-- Basic boundary handling
-- Random initialization
+- Random/resampling boundary repair
+- Random (normal) initialization
 - Early stopping
 
 ## Possible Improvements
 
-1. Constraint Handling:
+1. Features
 
-   - [ ] Implement boundary repair
-   - [ ] Implement constraint domination
+   - [x] Constraint handling: boundary repair
+   - [ ] Constraint handling: constraint domination
 
-2. Initialization:
+   - [x] Problem-specific initialization scheme
 
-   - [ ] Develop problem-specific initialization scheme
+   - [ ] CMA
+   - [ ] ES2 with self-adaptation
 
-3. Parameter Optimization:
+   - [x] Weighted Recombination
+   - [x] Elitism
+
+   - [x] Correlated Mutations
+
+2. Parameter Optimization
+
    - [ ] Optimize population size
-   - [ ] Optimize number of generations
-   - [ ] Optimize mutation parameters
+   - [ ] Optimize recombination params
+   - [ ] Optimize mutation params
+   - [ ] Optimize others...
 
 ## Setup and Usage
 
@@ -46,9 +54,9 @@ The current implementation uses an Evolution Strategy (ES) algorithm with:
 python -m venv venv
 
 # On Windows:
-venv\Scripts\activate && pip install -r requirements.dev.txt
+venv\Scripts\activate && pip install -r requirements.txt
 # On Unix or MacOS:
-source venv/bin/activate && pip install -r requirements.dev.txt
+source venv/bin/activate && pip install -r requirements.txt
 ```
 
 #### Option 2: Using Conda

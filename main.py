@@ -4,31 +4,17 @@ matplotlib.use("Qt5Agg")
 
 import math
 import argparse
-from evopy import EvoPy
-from evopy import ProgressReport
 from sklearn.metrics.pairwise import euclidean_distances
 import matplotlib.pyplot as plt
 import numpy as np
+
+from evopy import EvoPy
+from evopy import ProgressReport
 from evopy.strategy import Strategy
 from evopy.constraint_handling import *
-
-###########################################################
-#                                                         #
-# EvoPy framework from https://github.com/evopy/evopy     #
-# Read documentation on github for further information.   #
-#                                                         #
-# Adjustments by Renzo Scholman:                          #
-#       Added evaluation counter (also in ProgressReport) #
-#       Added max evaluation stopping criterion           #
-#       Added random repair for solution                  #
-#       Added target fitness value tolerance              #
-#                                                         #
-# Original license stored in LICENSE file                 #
-#                                                         #
-# Install required dependencies with:                     #
-#       pip install -r requirements.dev.txt               #
-#                                                         #
-###########################################################
+from evopy.initializers import *
+from evopy.optimal_values import optimal_values
+from evopy.results_manager import ResultsManager
 
 
 def parse_args():
@@ -37,7 +23,7 @@ def parse_args():
     )
     # Problem configuration
     parser.add_argument(
-        "--n_circles", type=int, default=10, help="Number of circles to pack"
+        "--n_circles", "-n", type=int, default=10, help="Number of circles to pack"
     )
     # Evolution Strategy parameters
     parser.add_argument(
@@ -51,44 +37,67 @@ def parse_args():
     )
     parser.add_argument(
         "--strategy",
-        type=Strategy.from_string,
-        choices=["single", "multiple", "full", "cma"],
+        type=str,
+        choices=[s.value for s in Strategy],
         default="single",
         help="Variance strategy (single/multiple/full/cma)",
     )
+    # Extension parameters
     parser.add_argument(
         "--constraint_handling",
-        type=ConstraintHandling.from_string,
-        choices=[ConstraintHandling.BOUNDARY_REPAIR, ConstraintHandling.CONSTRAINT_DOMINATION, ConstraintHandling.RANDOM_REPAIR],
-        default="BR",
+        type=str,
+        choices=[s.value for s in ConstraintHandling],
+        default="RR",
         help="How to deal with out-of-bounds individuals: "
         "Boundary Repair (BD), Constraint domination (CD), or Random repair (RR)",
     )
-    # Visualization and output
+    parser.add_argument("--elitism", action="store_true", help="Elitism")
     parser.add_argument(
-        "--skip_plot_sols", action="store_true", help="Plot solutions during evolution"
+        "--recombination_strategy",
+        type=str,
+        choices=["weighted", "intermediate", "correlated_mutations"],
+        default=None,
+        help="Recombination strategy to use",
     )
     parser.add_argument(
-        "--skip_print_sols",
+        "--init_strategy",
+        type=str,
+        choices=[s.value for s in InitializationStrategy],
+        default="random",
+        help="Initialization strategy",
+    )
+    parser.add_argument(
+        "--init_jitter",
+        type=float,
+        default=0.1,
+        help="jitter/std amount for initialization strategies",
+    )
+    # Visualization and output
+    parser.add_argument(
+        "--skip_plot",
         action="store_true",
-        help="Print solutions during evolution",
+        help="Skip plotting solutions during evolution",
+    )
+    parser.add_argument(
+        "--skip_print",
+        action="store_true",
+        help="Skip printing solutions during evolution",
     )
     # Early stopping criteria
     parser.add_argument(
         "--max_evals", type=int, default=1e5, help="Maximum number of evaluations"
     )
     parser.add_argument("--max_time", type=float, help="Maximum runtime in seconds")
-    
-    parser.add_argument("--elitism", type=bool, help="Elitism", default=False)
-    parser.add_argument("--recombination_strategy",type=str,
-        choices=["weighted","intermediate"],
-        default=None,
-        help="Recombination strategy to use",
+    parser.add_argument(
+        "--random_seed", type=int, help="Random seed for reproducibility"
     )
-    # Parse and verify
+    # Parse, convert, and validate arguments
     args = parser.parse_args()
+    args.strategy = Strategy.from_string(args.strategy)
+    args.constraint_handling = ConstraintHandling.from_string(args.constraint_handling)
+    args.init_strategy = InitializationStrategy.from_string(args.init_strategy)
     if not 2 <= args.n_circles:
-        parser.error("Number of circles must be at least 20")
+        parser.error("Number of circles must be at least 2")
     return args
 
 
@@ -117,7 +126,15 @@ def circles_in_a_square(individual):
 
 class CirclesInASquare:
     def __init__(
-        self, n_circles, output_statistics=True, plot_sols=False, print_sols=False
+        self,
+        n_circles,
+        print_sols=True,
+        plot_sols=True,
+        output_statistics=True,
+        init_strategy=None,
+        init_jitter=0.1,
+        results_manager=None,
+        random_seed=None,
     ):
         self.print_sols = print_sols
         self.output_statistics = output_statistics
@@ -126,6 +143,10 @@ class CirclesInASquare:
         self.best_total_score = []
         self.fig = None
         self.ax = None
+        self.init_strategy = init_strategy
+        self.init_jitter = init_jitter
+        self.results_manager = results_manager
+        self.random_seed = random_seed
 
         assert 2 <= n_circles <= 20
 
@@ -197,30 +218,18 @@ class CirclesInASquare:
             self.fig.canvas.draw()
             self.fig.canvas.flush_events()
 
-    def get_target(self):
-        values_to_reach = [
-            1.414213562373095048801688724220,  # 2
-            1.035276180410083049395595350499,  # 3
-            1.000000000000000000000000000000,  # 4
-            0.707106781186547524400844362106,  # 5
-            0.600925212577331548853203544579,  # 6
-            0.535898384862245412945107316990,  # 7
-            0.517638090205041524697797675248,  # 8
-            0.500000000000000000000000000000,  # 9
-            0.421279543983903432768821760651,  # 10
-            0.398207310236844165221512929748,
-            0.388730126323020031391610191835,
-            0.366096007696425085295389370603,
-            0.348915260374018877918854409001,
-            0.341081377402108877637121191351,
-            0.333333333333333333333333333333,
-            0.306153985300332915214516914060,
-            0.300462606288665774426601772290,
-            0.289541991994981660261698764510,
-            0.286611652351681559449894454738,
-        ]
+        # Update results manager if available
+        if self.results_manager is not None:
+            self.results_manager.update_progress(
+                report.generation,
+                report.best_fitness,
+                report.avg_fitness,
+                report.std_fitness,
+                report.best_genotype,
+            )
 
-        return values_to_reach[self.n_circles - 2]
+    def get_target(self):
+        return optimal_values[self.n_circles - 2]
 
     def run_evolution_strategies(
         self,
@@ -228,13 +237,42 @@ class CirclesInASquare:
         num_children,
         generations,
         strategy,
-        constraint_handling_func,
+        constraint_handling,
         max_evaluations,
         max_run_time,
         recombination_strategy,
         elitism,
+        random_seed=None,
     ):
+        settings = {
+            "n_circles": self.n_circles,
+            "population_size": population_size,
+            "num_children": num_children,
+            "generations": generations,
+            "strategy": strategy.value,
+            "constraint_handling": constraint_handling.value,
+            "max_evaluations": max_evaluations,
+            "max_run_time": max_run_time,
+            "recombination_strategy": recombination_strategy,
+            "elitism": elitism,
+            "init_strategy": self.init_strategy.value,
+            "init_jitter": self.init_jitter,
+        }
+        self.results_manager.start_run(settings)
+
         callback = self.statistics_callback if self.output_statistics else None
+
+        initial_population = np.asarray(
+            [
+                init_func_dipatch[self.init_strategy](
+                    self.n_circles,
+                    bounds=(0, 1),
+                    jitter=self.init_jitter,
+                    random_state=self.random_seed,
+                )
+                for _ in range(population_size)
+            ]
+        )
 
         evopy = EvoPy(
             (
@@ -243,20 +281,21 @@ class CirclesInASquare:
                 else circles_in_a_square_scipy
             ),  # Fitness function
             self.n_circles * 2,  # Number of parameters
+            initial_population,
             reporter=callback,  # Prints statistics at each generation
             maximize=True,
             generations=generations,
             population_size=population_size,
             num_children=num_children,
             strategy=strategy,
-            constraint_handling_func=constraint_handling_func,
+            constraint_handling_func=constraint_func_dispatch[constraint_handling],
             bounds=(0, 1),
-            random_seed=42,
+            random_seed=self.random_seed,
             target_fitness_value=self.get_target(),
             max_evaluations=max_evaluations,
             max_run_time=max_run_time,
             recombination_strategy=recombination_strategy,
-            elitism=elitism
+            elitism=elitism,
         )
 
         best_solution = evopy.run()
@@ -267,28 +306,31 @@ class CirclesInASquare:
         plt.ioff()
         plt.show()  # Keep the plot open at the end
 
+        # Save results
+        if self.results_manager is not None:
+            self.results_manager.save_results(best_solution, self.get_target())
+
         return best_solution
 
 
 if __name__ == "__main__":
     args = parse_args()
-    # Map string strategy to Strategy enum
+    # Initialize runner
     runner = CirclesInASquare(
         n_circles=args.n_circles,
-        print_sols=not args.skip_print_sols,
-        plot_sols=not args.skip_plot_sols,
+        print_sols=not args.skip_print,
+        plot_sols=not args.skip_plot,
+        init_strategy=args.init_strategy,
+        init_jitter=args.init_jitter,
+        results_manager=ResultsManager(),
+        random_seed=args.random_seed,
     )
-    constraint_func_dispatch = {
-        ConstraintHandling.BOUNDARY_REPAIR: run_boundary_repair,
-        ConstraintHandling.CONSTRAINT_DOMINATION: run_constraint_domination,
-        ConstraintHandling.RANDOM_REPAIR: run_random_repair,
-    }
     best = runner.run_evolution_strategies(
         population_size=args.population_size,
         num_children=args.num_children,
         generations=args.generations,
         strategy=args.strategy,
-        constraint_handling_func=constraint_func_dispatch[args.constraint_handling],
+        constraint_handling=args.constraint_handling,
         max_evaluations=args.max_evals,
         recombination_strategy=args.recombination_strategy,
         elitism=args.elitism,

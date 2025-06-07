@@ -1,6 +1,3 @@
-"""Module containing the ProgressReport class, used to report on the progress of the optimizer."""
-
-
 class ProgressReport:
     """Class representing a report on an intermediate state of the learning process."""
 
