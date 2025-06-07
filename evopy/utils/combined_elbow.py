@@ -43,7 +43,7 @@ def plot_combined_elbow(results, option_name, options, save_path):
             generations,
             mean_progression,
             color=colors[idx],
-            label=f"{option.value} (Mean)",
+            label=f"{str(option)} (Mean)",
             linewidth=2,
         )
         plt.plot(
@@ -51,7 +51,7 @@ def plot_combined_elbow(results, option_name, options, save_path):
             best_run,
             color=colors[idx],
             linestyle="--",
-            label=f"{option.value} (Best Run)",
+            label=f"{str(option)} (Best Run)",
             linewidth=1.5,
         )
         plt.fill_between(

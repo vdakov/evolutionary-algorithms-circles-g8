@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class Strategy(Enum):
     SINGLE = "single"
     MULTIPLE = "multiple"

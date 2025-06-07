@@ -1,9 +1,10 @@
-from experiments import run_single_comparison
+from experiments import run_single_comparison, run_single_comparison_with_elitism
 from evopy.initializers import InitializationStrategy
 
 if __name__ == "__main__":
     # Run experiment
-    results, analysis = run_single_comparison(
+    # results, analysis = run_single_comparison(
+    results, analysis = run_single_comparison_with_elitism(
         "Initialization Scheme",
         options=[s for s in InitializationStrategy],
         param_to_overwrite="init_strategy",

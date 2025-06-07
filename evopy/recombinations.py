@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class RecombinationStrategy(Enum):
     NONE = "none"
     WEIGHTED = "weighted"

@@ -97,7 +97,9 @@ def parse_args():
     args = parser.parse_args()
     args.strategy = Strategy.from_string(args.strategy)
     args.constraint_handling = ConstraintHandling.from_string(args.constraint_handling)
-    args.recombination_strategy = RecombinationStrategy.from_string(args.recombination_strategy)
+    args.recombination_strategy = RecombinationStrategy.from_string(
+        args.recombination_strategy
+    )
     args.init_strategy = InitializationStrategy.from_string(args.init_strategy)
     if not 2 <= args.n_circles:
         parser.error("Number of circles must be at least 2")
