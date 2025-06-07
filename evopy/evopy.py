@@ -131,12 +131,22 @@ class EvoPy:
 
             if self.elitism:
                 start_index = 1
-
-            children = [
-                parent.reproduce(*children_args)
-                for _ in range(self.num_children)
-                for parent in population[start_index:]
-            ]
+                
+            if self.strategy == Strategy.CMA: 
+                children = Individual.reproduce_cma(
+                    population,
+                    self.population_size,
+                    self.population_size // 3,
+                    self.fitness_function,
+                    self.constraint_handling_func,
+                    self.bounds,
+                )
+            else:
+                children = [
+                    parent.reproduce(*children_args)
+                    for _ in range(self.num_children)
+                    for parent in population[start_index:]
+                ]
 
             if self.elitism:
                 children.append(best_ever.copy())
@@ -189,6 +199,8 @@ class EvoPy:
                     int((self.individual_length + 1) * self.individual_length / 2)
                 )
             )
+        elif self.strategy == Strategy.CMA:
+            strategy_parameters = None # No additional parameters needed for CMA strategy
         else:
             raise ValueError(
                 "Provided strategy parameter was not an instance of Strategy"
