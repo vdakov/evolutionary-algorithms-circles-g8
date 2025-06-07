@@ -18,6 +18,7 @@ import matplotlib
 
 matplotlib.use("Qt5Agg")
 
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Circles in a Square (CiaS) Evolutionary Algorithm"
@@ -106,8 +107,8 @@ def parse_args():
         args.recombination_strategy
     )
     args.init_strategy = InitializationStrategy.from_string(args.init_strategy)
-    if not 2 <= args.n_circles:
-        parser.error("Number of circles must be at least 2")
+    if not 2 <= args.n_circles <= 30:
+        parser.error("Number of circles must be between 2 and 30")
     return args
 
 
@@ -160,7 +161,7 @@ class CirclesInASquare:
         self.remaining_population_cma = remaining_population_cma
         self.random_seed = random_seed
 
-        assert 2 <= n_circles <= 20
+        assert 2 <= n_circles <= 30
 
         if self.plot_best_sol:
             self.set_up_plot()
