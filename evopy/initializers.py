@@ -29,57 +29,56 @@ def random_init(n_circles, bounds=(0, 1), jitter=0.1, random_state=None):
 
 
 def grid_init(n_circles, bounds=(0, 1), jitter=0.1, random_state=None):
-    """Grid-based initialization with random jitter"""
+    """Grid-based initialization with spacing"""
     rng = random_with_seed(random_state)
     # Calculate grid dimensions
     grid_size = math.ceil(math.sqrt(n_circles))
     spacing = (bounds[1] - bounds[0]) / (grid_size + 1)
     points = []
-    for i in range(grid_size):
-        for j in range(grid_size):
+    for x in np.linspace(bounds[0] + spacing, bounds[1] - spacing, grid_size):
+        for y in np.linspace(bounds[0] + spacing, bounds[1] - spacing, grid_size):
             if len(points) // 2 >= n_circles:
                 break
-            # Add jitter
-            x = (
-                bounds[0]
-                + spacing * (i + 1)
-                + rng.uniform(-jitter * spacing, jitter * spacing)
+            # Add controlled jitter that ensures points stay within bounds
+            max_jitter = min(
+                spacing * jitter,
+                min(x - bounds[0], bounds[1] - x, y - bounds[0], bounds[1] - y),
             )
-            y = (
-                bounds[0]
-                + spacing * (j + 1)
-                + rng.uniform(-jitter * spacing, jitter * spacing)
-            )
-            points.extend([x, y])
+            jitter_x = rng.uniform(-max_jitter, max_jitter)
+            jitter_y = rng.uniform(-max_jitter, max_jitter)
+            points.extend([x + jitter_x, y + jitter_y])
     return np.array(points[: n_circles * 2])
 
 
 def concentric_init(n_circles, bounds=(0, 1), jitter=0.1, random_state=None):
-    """Concentric circles initialization with jitter"""
+    """Concentric circles initialization with spacing"""
     rng = random_with_seed(random_state)
     center = (bounds[1] + bounds[0]) / 2
     max_radius = (bounds[1] - bounds[0]) / 2
+    # Calculate optimal number of rings based on area
+    area_per_circle = (max_radius**2) / n_circles
+    ring_spacing = math.sqrt(area_per_circle)
     points = []
-    circles_per_ring = [1]  # Center point
-    radius_factor = 0.5
-    while sum(circles_per_ring) < n_circles:
-        # Each ring can fit more circles as radius increases
-        next_ring = math.floor(2 * math.pi * len(circles_per_ring) / 2)
-        circles_per_ring.append(next_ring)
-    curr = 0
-    # Iterate over each ring
-    for ring_idx, n_points in enumerate(circles_per_ring):
-        radius = max_radius * radius_factor * ring_idx
+    curr_radius = ring_spacing
+    while len(points) < n_circles * 2:
+        # Calculate number of points that fit on current ring
+        circumference = 2 * math.pi * curr_radius
+        n_points = max(1, int(circumference / ring_spacing))
         for i in range(n_points):
-            if curr >= n_circles:
+            if len(points) >= n_circles * 2:
                 break
-            angle = (2 * math.pi * i / n_points) + rng.uniform(-jitter, jitter)
-            r = radius * (1 + rng.uniform(-jitter, jitter))
-            # Add jitter
-            x = center + r * math.cos(angle)
-            y = center + r * math.sin(angle)
+            angle = 2 * math.pi * i / n_points
+            # Add controlled jitter
+            r_jitter = rng.uniform(-jitter * ring_spacing, jitter * ring_spacing)
+            angle_jitter = rng.uniform(
+                -jitter * math.pi / n_points, jitter * math.pi / n_points
+            )
+            r = curr_radius + r_jitter
+            angle_final = angle + angle_jitter
+            x = center + r * math.cos(angle_final)
+            y = center + r * math.sin(angle_final)
             points.extend([x, y])
-            curr += 1
+        curr_radius += ring_spacing
     return np.array(points[: n_circles * 2])
 
 
