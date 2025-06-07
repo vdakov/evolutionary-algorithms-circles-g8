@@ -1,5 +1,4 @@
 import numpy as np
-
 from evopy.recombinations import RecombinationStrategy
 from evopy.strategy import Strategy
 from evopy.utils import random_with_seed
@@ -58,6 +57,8 @@ class Individual:
             and len(strategy_parameters) == self.length * (self.length + 1) / 2
         ):
             self.reproduce = self._reproduce_full_variance
+        elif strategy == Strategy.CMA:
+            self.reproduce = None  # Handled separately
         else:
             raise ValueError("The length of the strategy parameters was not correct.")
 

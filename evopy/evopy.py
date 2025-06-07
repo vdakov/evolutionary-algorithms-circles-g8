@@ -33,6 +33,7 @@ class EvoPy:
         bounds=None,
         recombination_strategy=None,
         elitism=True,
+        cma_state=None,
     ):
         """Initializes an EvoPy instance.
 
@@ -74,6 +75,7 @@ class EvoPy:
         self.evaluations = 0
         self.recombination_strategy = recombination_strategy
         self.elitism = elitism
+        self.cma_state = cma_state
 
     def _check_early_stop(self, start_time, best):
         """Check whether the algorithm can stop early, based on time and fitness target.
@@ -137,9 +139,18 @@ class EvoPy:
                 children_args = (weights, population, self.recombination_strategy)
             # Generate offspring
             children = []
-            for parent in population:
-                for _ in range(self.num_children):
-                    children.append(parent.reproduce(*children_args))
+            if self.strategy == Strategy.CMA:
+                children = self.cma_state.reproduce_cma(
+                    population,
+                    self.population_size,
+                    self.fitness_function,
+                    self.constraint_handling_func,
+                    self.bounds,
+                )
+            else:
+                for parent in population:
+                    for _ in range(self.num_children):
+                        children.append(parent.reproduce(*children_args))
             # Add elite if enabled
             if self.elitism:
                 children.append(best_ever.copy())
@@ -196,6 +207,8 @@ class EvoPy:
                     int((self.individual_length + 1) * self.individual_length / 2)
                 )
             )
+        elif self.strategy == Strategy.CMA:
+            strategy_parameters = None  # CMA does not use individual params
         else:
             raise ValueError(
                 "Provided strategy parameter was not an instance of Strategy"
