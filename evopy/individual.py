@@ -1,5 +1,6 @@
 import numpy as np
 
+from evopy.recombinations import RecombinationStrategy
 from evopy.strategy import Strategy
 from evopy.utils import random_with_seed
 
@@ -246,7 +247,7 @@ class Individual:
     def recombination(
         self, x, strategy_parameters, recombination_params, reproduction_strategy
     ):
-        if reproduction_strategy == "weighted":
+        if reproduction_strategy == RecombinationStrategy.WEIGHTED.value:
             weights, population = recombination_params
             w_x = 0.7
             w_r = 0.3
@@ -259,7 +260,7 @@ class Individual:
             x_new = (w_x) * x + aggregate_x * w_r
             strategy_parameters = (w_x) * strategy_parameters + aggregate_r * w_r
             return x_new, strategy_parameters
-        elif reproduction_strategy == "intermediate":
+        elif reproduction_strategy == RecombinationStrategy.INTERMEDIATE.value:
             weights, population = recombination_params
 
             if not population:
@@ -280,7 +281,7 @@ class Individual:
             average_genotype = sum_genotype / num_parents
             # average_strategy_parameters = sum_strategy_parameters / num_parents
             return average_genotype, self.strategy_parameters
-        elif reproduction_strategy == "correlated_mutations":
+        elif reproduction_strategy == RecombinationStrategy.CORRELATED_MUTATIONS.value:
             _, population = recombination_params
 
             # pick random individual to combine with

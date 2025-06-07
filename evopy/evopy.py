@@ -4,6 +4,7 @@ import numpy as np
 
 from evopy.individual import Individual
 from evopy.progress_report import ProgressReport
+from evopy.recombinations import RecombinationStrategy
 from evopy.strategy import Strategy
 from evopy.constraint_handling import run_random_repair
 from evopy.utils import random_with_seed
@@ -118,7 +119,7 @@ class EvoPy:
         for generation in range(self.generations):
             children_args = ()
 
-            if self.recombination_strategy:
+            if self.recombination_strategy != RecombinationStrategy.NONE.value:
                 fitnesses = [
                     individual.evaluate(self.fitness_function)
                     for individual in population
