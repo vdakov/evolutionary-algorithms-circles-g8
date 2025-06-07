@@ -1,9 +1,3 @@
-import matplotlib
-
-from evopy.recombinations import RecombinationStrategy
-
-matplotlib.use("Qt5Agg")
-
 import math
 import argparse
 from sklearn.metrics.pairwise import euclidean_distances
@@ -17,6 +11,11 @@ from evopy.constraint_handling import *
 from evopy.initializers import *
 from evopy.optimal_values import optimal_values
 from evopy.results_manager import ResultsManager
+from evopy.recombinations import RecombinationStrategy
+
+import matplotlib
+
+matplotlib.use("Qt5Agg")
 
 
 def parse_args():

@@ -1,9 +1,8 @@
-import sys
-import os
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import numpy as np
+import os
+import json
+import matplotlib.pyplot as plt
+
 from evopy.strategy import Strategy
 from evopy.constraint_handling import ConstraintHandling
 from evopy.initializers import InitializationStrategy
@@ -11,30 +10,11 @@ from evopy.results_manager import ResultsManager
 from evopy.recombinations import RecombinationStrategy
 from evopy.utils.combined_elbow import plot_combined_elbow
 from main import CirclesInASquare
-import json
-import matplotlib.pyplot as plt
 
 
-def run_single_comparison(
-    option_name,
-    options,
-    param_to_overwrite,
-    param_in_runner=True,
-    n_circles=10,
-    n_runs=5,
-    population_size=30,
-    num_children=1,
-    generations=1000,
-    random_seeds=None,
+def create_defaults(
+    n_circles, population_size, num_children, generations, results_manager
 ):
-    if random_seeds is None:
-        random_seeds = np.random.randint(0, 1000000, size=n_runs)
-    # Create results manager for the experiment
-    results_manager = ResultsManager(
-        f"{param_to_overwrite}_comparison", save_files=False
-    )
-
-    # Defaults for CirclesInASquare constructor
     circles_defaults = {
         "n_circles": n_circles,
         "print_sols": False,
@@ -42,9 +22,8 @@ def run_single_comparison(
         "init_strategy": InitializationStrategy.RANDOM,
         "init_jitter": 0.1,
         "results_manager": results_manager,
-        "random_seed": None,  # Will be set per run
+        "random_seed": None,
     }
-    # Defaults for run_evolution_strategies
     evolution_defaults = {
         "population_size": population_size,
         "num_children": num_children,
@@ -56,159 +35,43 @@ def run_single_comparison(
         "recombination_strategy": RecombinationStrategy.NONE,
         "elitism": False,
     }
-
-    # Results storage
-    results = {str(opt): [] for opt in options}
-    # Run experiment
-    for seed in random_seeds:
-        print(f"\nRunning with seed {seed}")
-        for opt in options:
-            print(f"Testing {param_to_overwrite} = {opt}")
-            # Construct arguments
-            circles_args = {**circles_defaults, "random_seed": int(seed)}
-            evolution_args = {
-                **evolution_defaults,
-            }
-            # Tested parameter
-            if param_in_runner:
-                evolution_args[param_to_overwrite] = opt
-            else:
-                circles_args[param_to_overwrite] = opt
-            # Initialize and run
-            runner = CirclesInASquare(**circles_args)
-            best_solution = runner.run_evolution_strategies(**evolution_args)
-            # Store results
-            results[str(opt)].append(
-                {
-                    "seed": int(seed),
-                    "best_solution": (
-                        best_solution.tolist()
-                        if isinstance(best_solution, np.ndarray)
-                        else best_solution
-                    ),
-                    "best_fitness": (
-                        runner.best_total_score[-1] if runner.best_total_score else None
-                    ),
-                    "target_value": runner.get_target(),
-                    "generations_run": len(runner.best_total_score),
-                    "progression": runner.best_total_score,
-                }
-            )
-    # Analyze results
-    os.makedirs(results_manager.run_dir, exist_ok=True)
-    analysis = {"seeds": random_seeds.tolist()}
-    for opt in options:
-        opt_results = results[str(opt)]
-        fitnesses = [r["best_fitness"] for r in opt_results]
-        target = opt_results[0]["target_value"]  # Same for all runs
-        analysis[str(opt)] = {
-            "mean_fitness": np.mean(fitnesses),
-            "std_fitness": np.std(fitnesses),
-            "best_fitness": np.max(fitnesses),
-            "worst_fitness": np.min(fitnesses),
-            "target_value": target,
-        }
-    # Save detailed results
-    results_path = os.path.join(results_manager.run_dir, "detailed_results.json")
-    with open(results_path, "w") as f:
-        json.dump(results, f, indent=4)
-    # Save analysis
-    analysis_path = os.path.join(results_manager.run_dir, "analysis.json")
-    with open(analysis_path, "w") as f:
-        json.dump(analysis, f, indent=4)
-    # Boxplot
-    plt.figure(figsize=(12, 6))
-    data = [[r["best_fitness"] for r in results[str(opt)]] for opt in options]
-    plt.boxplot(data, tick_labels=[str(s) for s in options])
-    plt.axhline(y=target, color="r", linestyle="--", label="Target Value")
-    plt.title(f"{option_name.capitalize()} Comparison")
-    plt.ylabel("Best Fitness Achieved")
-    plt.legend()
-    plt.grid(True)
-    plt.savefig(
-        os.path.join(results_manager.run_dir, f"{param_to_overwrite}_comparison.png")
-    )
-    plt.close()
-    # Enhanced elbow plot
-    plot_combined_elbow(
-        results,
-        option_name,
-        options,
-        os.path.join(results_manager.run_dir, f"{param_to_overwrite}_progression.png"),
-    )
-    return results, analysis
+    return circles_defaults, evolution_defaults
 
 
-def run_single_comparison_with_elitism(
-    option_name,
+def run_experiments(
     options,
+    random_seeds,
     param_to_overwrite,
-    param_in_runner=True,
-    n_circles=10,
-    n_runs=5,
-    population_size=30,
-    num_children=1,
-    generations=1000,
-    random_seeds=None,
+    param_in_runner,
+    circles_defaults,
+    evolution_defaults,
+    with_elitism=False,
 ):
-    if random_seeds is None:
-        random_seeds = np.random.randint(0, 1000000, size=n_runs)
-    # Create results manager for the experiment
-    results_manager = ResultsManager(
-        f"{param_to_overwrite}_comparison", save_files=False
-    )
+    results = {}
 
-    # Defaults for CirclesInASquare constructor
-    circles_defaults = {
-        "n_circles": n_circles,
-        "print_sols": False,
-        "plot_sols": False,
-        "init_strategy": InitializationStrategy.RANDOM,
-        "init_jitter": 0.1,
-        "results_manager": results_manager,
-        "random_seed": None,  # Will be set per run
-    }
-    # Defaults for run_evolution_strategies
-    evolution_defaults = {
-        "population_size": population_size,
-        "num_children": num_children,
-        "generations": generations,
-        "strategy": Strategy.SINGLE,
-        "constraint_handling": ConstraintHandling.RANDOM_REPAIR,
-        "max_evaluations": 1e5,
-        "max_run_time": None,
-        "recombination_strategy": RecombinationStrategy.NONE,
-        "elitism": False,
-    }
-
-    # Results storage
-    results = {
-        str(opt) + "," + str(elitism): []
-        for opt in options
-        for elitism in [True, False]
-    }
-    # Run experiment
     for seed in random_seeds:
         print(f"\nRunning with seed {seed}")
         for opt in options:
-            for elitism in [True, False]:
-                print(f"Testing {param_to_overwrite} = {opt}, elitism = {elitism}")
-                # Construct arguments
+            elitism_vals = [True, False] if with_elitism else [False]
+            for elitism in elitism_vals:
+                key = f"{opt},elitism" if with_elitism and elitism else str(opt)
+                print(
+                    f"Testing {param_to_overwrite} = {opt}, elitism = {elitism}"
+                    if with_elitism
+                    else f"Testing {param_to_overwrite} = {opt}"
+                )
                 circles_args = {**circles_defaults, "random_seed": int(seed)}
-                evolution_args = {
-                    **evolution_defaults,
-                    "elitism": elitism,
-                }
-                # Tested parameter
+                evolution_args = {**evolution_defaults, "elitism": elitism}
+
                 if param_in_runner:
                     evolution_args[param_to_overwrite] = opt
                 else:
                     circles_args[param_to_overwrite] = opt
-                # Initialize and run
+
                 runner = CirclesInASquare(**circles_args)
                 best_solution = runner.run_evolution_strategies(**evolution_args)
-                # Store results
-                results[str(opt) + "," + str(elitism)].append(
+
+                results.setdefault(key, []).append(
                     {
                         "seed": int(seed),
                         "best_solution": (
@@ -226,56 +89,97 @@ def run_single_comparison_with_elitism(
                         "progression": runner.best_total_score,
                     }
                 )
-    # Analyze results
-    os.makedirs(results_manager.run_dir, exist_ok=True)
-    analysis = {"seeds": random_seeds.tolist()}
-    for opt in options:
-        for elitism in [True, False]:
-            opt_results = results[str(opt) + "," + str(elitism)]
-            fitnesses = [r["best_fitness"] for r in opt_results]
-            target = opt_results[0]["target_value"]  # Same for all runs
-            analysis[str(opt) + "," + str(elitism)] = {
-                "mean_fitness": np.mean(fitnesses),
-                "std_fitness": np.std(fitnesses),
-                "best_fitness": np.max(fitnesses),
-                "worst_fitness": np.min(fitnesses),
-                "target_value": target,
-            }
-    # Save detailed results
-    results_path = os.path.join(results_manager.run_dir, "detailed_results.json")
-    with open(results_path, "w") as f:
+    return results
+
+
+def analyze_and_plot_results(
+    results, options, result_dir, option_name, param_to_overwrite, with_elitism=False
+):
+    os.makedirs(result_dir, exist_ok=True)
+
+    analysis = {"seeds": [r["seed"] for r in next(iter(results.values()))]}
+    target = next(iter(results.values()))[0]["target_value"]
+
+    for key, opt_results in results.items():
+        fitnesses = [r["best_fitness"] for r in opt_results]
+        analysis[key] = {
+            "mean_fitness": np.mean(fitnesses),
+            "std_fitness": np.std(fitnesses),
+            "best_fitness": np.max(fitnesses),
+            "worst_fitness": np.min(fitnesses),
+            "target_value": target,
+        }
+
+    with open(os.path.join(result_dir, "detailed_results.json"), "w") as f:
         json.dump(results, f, indent=4)
-    # Save analysis
-    analysis_path = os.path.join(results_manager.run_dir, "analysis.json")
-    with open(analysis_path, "w") as f:
+
+    with open(os.path.join(result_dir, "analysis.json"), "w") as f:
         json.dump(analysis, f, indent=4)
+
     # Boxplot
     plt.figure(figsize=(12, 6))
-    data = [
-        [r["best_fitness"] for r in results[str(opt) + "," + str(elitism)]]
-        for opt in options
-        for elitism in [True, False]
-    ]
-    plt.boxplot(
-        data,
-        tick_labels=[
-            str(s) + (", elitism " if b else "") for s in options for b in [True, False]
-        ],
-    )
+    data = [[r["best_fitness"] for r in results[key]] for key in results]
+    labels = [str(key) for key in results]
+    plt.boxplot(data, tick_labels=labels)
     plt.axhline(y=target, color="r", linestyle="--", label="Target Value")
     plt.title(f"{option_name.capitalize()} Comparison")
     plt.ylabel("Best Fitness Achieved")
     plt.legend()
     plt.grid(True)
-    plt.savefig(
-        os.path.join(results_manager.run_dir, f"{param_to_overwrite}_comparison.png")
-    )
+    plt.savefig(os.path.join(result_dir, f"{param_to_overwrite}_comparison.png"))
     plt.close()
-    # Enhanced elbow plot
+
+    # Elbow plot
     plot_combined_elbow(
         results,
         option_name,
-        [str(a) + "," + str(b) for a in options for b in [True, False]],
-        os.path.join(results_manager.run_dir, f"{param_to_overwrite}_progression.png"),
+        list(results.keys()),
+        os.path.join(result_dir, f"{param_to_overwrite}_progression.png"),
     )
+
+    return analysis
+
+
+def run_comparison(
+    option_name,
+    options,
+    param_to_overwrite,
+    param_in_runner=True,
+    n_circles=10,
+    n_runs=5,
+    population_size=30,
+    num_children=1,
+    generations=1000,
+    random_seeds=None,
+    with_elitism=False,
+):
+    if random_seeds is None:
+        random_seeds = np.random.randint(0, 1000000, size=n_runs)
+
+    results_manager = ResultsManager(
+        f"{param_to_overwrite}_comparison", save_files=False
+    )
+    circles_defaults, evolution_defaults = create_defaults(
+        n_circles, population_size, num_children, generations, results_manager
+    )
+
+    results = run_experiments(
+        options,
+        random_seeds,
+        param_to_overwrite,
+        param_in_runner,
+        circles_defaults,
+        evolution_defaults,
+        with_elitism=with_elitism,
+    )
+
+    analysis = analyze_and_plot_results(
+        results,
+        options,
+        results_manager.run_dir,
+        option_name,
+        param_to_overwrite,
+        with_elitism=with_elitism,
+    )
+
     return results, analysis
