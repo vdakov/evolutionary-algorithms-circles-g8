@@ -5,6 +5,7 @@ class Strategy(Enum):
     SINGLE = "single"
     MULTIPLE = "multiple"
     FULL_VARIANCE = "full"
+    CMA = "cma"
 
     @staticmethod
     def from_string(s: str):
