@@ -28,8 +28,7 @@ We use the Evolution Strategy (ES) algorithm with:
 
    - [x] Problem-specific initialization scheme
 
-   - [ ] CMA
-   - [ ] ES2 with self-adaptation
+   - [x] CMA
 
    - [x] Weighted Recombination
    - [x] Elitism

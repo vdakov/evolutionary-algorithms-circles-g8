@@ -1,5 +1,6 @@
 import matplotlib
 
+from evopy.cma import CMAState
 from evopy.recombinations import RecombinationStrategy
 
 matplotlib.use("Qt5Agg")
@@ -145,6 +146,7 @@ class CirclesInASquare:
         init_strategy=None,
         init_jitter=0.1,
         results_manager=None,
+        remaining_population_cma=10,
         random_seed=None,
     ):
         self.print_sols = print_sols
@@ -157,8 +159,8 @@ class CirclesInASquare:
         self.init_strategy = init_strategy
         self.init_jitter = init_jitter
         self.results_manager = results_manager
+        self.remaining_population_cma = remaining_population_cma
         self.random_seed = random_seed
-        self.remaining_population_cma = 10
 
         assert 2 <= n_circles <= 20
 
@@ -254,7 +256,6 @@ class CirclesInASquare:
         max_run_time,
         recombination_strategy,
         elitism,
-        random_seed=None,
     ):
         settings = {
             "n_circles": self.n_circles,
@@ -270,6 +271,7 @@ class CirclesInASquare:
             "init_strategy": self.init_strategy.value,
             "init_jitter": self.init_jitter,
             "remaining_population_cma": self.remaining_population_cma,
+            "random_seed": self.random_seed,
         }
         self.results_manager.start_run(settings)
 
@@ -309,7 +311,13 @@ class CirclesInASquare:
             max_run_time=max_run_time,
             recombination_strategy=recombination_strategy.value,
             elitism=elitism,
-            remaining_population_cma=self.remaining_population_cma,
+            cma_state=(
+                CMAState(
+                    self.n_circles * 2, self.remaining_population_cma, self.random_seed
+                )
+                if strategy == Strategy.CMA
+                else None
+            ),
         )
 
         best_solution = evopy.run()
@@ -337,6 +345,7 @@ if __name__ == "__main__":
         init_strategy=args.init_strategy,
         init_jitter=args.init_jitter,
         results_manager=ResultsManager(),
+        remaining_population_cma=args.remaining_population_cma,
         random_seed=args.random_seed,
     )
     best = runner.run_evolution_strategies(

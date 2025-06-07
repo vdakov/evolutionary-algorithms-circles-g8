@@ -4,14 +4,7 @@ from evopy.strategy import Strategy
 from evopy.utils import random_with_seed
 
 
-COVARIANCE_MATRIX = None
-MEAN = None
-SIGMA = None  # step size
-P = None  # evolution path
-
-
 class Individual:
-
     """The individual of the evolutionary strategy algorithm.
 
     This class handles the reproduction of the individual, using both the genotype and the specified
@@ -65,7 +58,7 @@ class Individual:
         ):
             self.reproduce = self._reproduce_full_variance
         elif strategy == Strategy.CMA:
-            self.reproduce = self.reproduce_cma
+            self.reproduce = None  # Handled separately
         else:
             raise ValueError("The length of the strategy parameters was not correct.")
 
@@ -251,111 +244,6 @@ class Individual:
             self.constraint_handling_func,
             bounds=self.bounds,
         )
-
-    @staticmethod
-    def reproduce_cma(
-        population,
-        lambd,
-        mu,
-        fitness_function,
-        constraint_handling_func,
-        bounds,
-    ):
-        global COVARIANCE_MATRIX, MEAN, SIGMA, P
-        # Based on "The CMA Evolution Strategy: A Comparing Review" pp 75–102 https://link.springer.com/chapter/10.1007/3-540-32494-1_4
-
-        if COVARIANCE_MATRIX is None or MEAN is None or SIGMA is None:
-            xs = [
-                x.genotype for x in population
-            ]  # Extract genotypes from the population
-            MEAN = np.mean(xs[:mu], axis=0)  # Mean of the initial population
-            COVARIANCE_MATRIX = np.identity(
-                MEAN.shape[0]
-            )  # Initial covariance matrix as identity
-            SIGMA = 1
-            P = 0
-
-        xs = [
-            MEAN
-            + SIGMA
-            * np.random.multivariate_normal(np.zeros(MEAN.shape[0]), COVARIANCE_MATRIX)
-            for _ in range(lambd)
-        ]
-        next_population = [
-            Individual(x, Strategy.CMA, None, None, bounds=bounds) for x in xs
-        ]  # Return the new population
-        for x in next_population:
-            x.genotype = constraint_handling_func(
-                x, x.genotype
-            )  # Apply constraint handling to each individual
-
-        evaluated = [(x, x.evaluate(fitness_function)) for x in next_population]
-        evaluated.sort(key=lambda tup: tup[1], reverse=True)
-
-        top_mu = evaluated[:mu]
-        xs_top = np.array([ind.genotype for ind, _ in top_mu])
-
-        # Logarithmic ranking weights. By ranking what is meant is that it's not proportional to the fitness, but rather to the rank of the individual in the population.
-        ranks = np.arange(1, mu + 1)
-        weights = np.log(mu + 0.5) - np.log(ranks)
-        weights = weights / np.sum(weights)
-
-        # =========================== UPDATE STEP ===========================
-        old_mean = MEAN.copy()
-        n = MEAN.shape[0]
-
-        # Hyperparamters from online (current) and paramters from the cited paper. The second ones seemed to work boht
-
-        # mu_eff = 1 / np.sum(weights ** 2) # variance e #taken from cited paper
-        # c_cov = 1.0 / (n**2 + mu_eff) # taken from cited paper
-        # c_sigma = 1 / np.sqrt(n)
-        # d_sigma = 1
-        mu_eff = 1.0 / np.sum(weights**2)
-        c_sigma = np.sqrt(mu_eff + 2) / (n + np.sqrt(mu_eff + 2))
-        d_sigma = 1.0 + 2.0 * max(0, np.sqrt((mu_eff - 1) / (n + 1)) - 1) + c_sigma
-        c_cov = 4.0 / (n + 4.0)  # or 1/(dim**2+mu_eff), choose per variant
-
-        MEAN = np.sum(weights[:, np.newaxis] * xs_top, axis=0)
-        eigenvalues, _ = np.linalg.eigh(COVARIANCE_MATRIX)
-        assert np.all(eigenvalues > 0), "Matrix must be positive definite."
-
-        # P = (1 - c_sigma) * P + np.sqrt(c_sigma * (2 - c_sigma) * mu_eff) * (Cg_inv_sqrt @ ((MEAN - old_mean) / SIGMA))
-        C_inv_sqrt = np.linalg.inv(np.linalg.cholesky(COVARIANCE_MATRIX))
-        step = (MEAN - old_mean) / SIGMA
-        P = (1 - c_sigma) * P + np.sqrt(c_sigma * (2 - c_sigma) * mu_eff) * (
-            C_inv_sqrt @ step
-        )
-        # Rank Mu update, combined with the evolution path (from paper)
-        COVARIANCE_MATRIX = (
-            (1 - c_cov) * COVARIANCE_MATRIX
-            + (c_cov / mu_eff) * np.outer(P, P)
-            + c_cov  # Information from the previous covariance matrices
-            * (1 - 1 / mu_eff)
-            * np.sum(
-                [
-                    weights[i]
-                    * np.outer(
-                        (xs_top[i] - old_mean) / SIGMA, (xs_top[i] - old_mean) / SIGMA
-                    )
-                    for i in range(mu)
-                ],
-                axis=0,
-            )  # Current covariances matrix
-        )
-
-        SIGMA = SIGMA * np.exp(
-            (c_sigma / d_sigma)
-            * ((np.linalg.norm(P) / Individual.expected_norm(n)) - 1)
-        )
-        SIGMA = max(
-            min(SIGMA, 1.0), 1e-8
-        )  # clipping the step size to avoid numerical issues
-
-        return next_population
-
-    @staticmethod
-    def expected_norm(n):
-        return np.sqrt(n) * (1.0 - 1.0 / (4.0 * n) + 1.0 / (21.0 * (n**2)))
 
     def recombination(
         self, x, strategy_parameters, recombination_params, reproduction_strategy
