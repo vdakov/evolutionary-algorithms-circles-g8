@@ -6,7 +6,11 @@ from evopy.individual import Individual
 from evopy.progress_report import ProgressReport
 from evopy.recombinations import RecombinationStrategy
 from evopy.strategy import Strategy
-from evopy.constraint_handling import run_random_repair, run_constraint_domination, ConstraintHandling
+from evopy.constraint_handling import (
+    run_random_repair,
+    run_constraint_domination,
+    ConstraintHandling,
+)
 from evopy.utils import random_with_seed
 
 
@@ -156,12 +160,19 @@ class EvoPy:
                 children.append(best_ever.copy())
             # Evaluate children
             children_fitness = np.array(
-                [child.evaluate(self.fitness_function) for child in children])
+                [child.evaluate(self.fitness_function) for child in children]
+            )
             # Selection
 
             violation_errors = np.array(
-                [ve if ve is not None else 0 for ve in [child.violation_error for child in children]])
-            fitness_scores = np.array([child.evaluate(self.fitness_function) for child in children])
+                [
+                    ve if ve is not None else 0
+                    for ve in [child.violation_error for child in children]
+                ]
+            )
+            fitness_scores = np.array(
+                [child.evaluate(self.fitness_function) for child in children]
+            )
 
             fitness_key = -fitness_scores if self.maximize else fitness_scores
 
