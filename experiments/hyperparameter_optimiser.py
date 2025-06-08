@@ -97,12 +97,16 @@ if __name__ == "__main__":
                 }
             )
 
+        end_time = time.time()
+        print(f"Finished experiment {current_experiment}/{total_experiments} in {end_time - start_time} seconds")
+
         # reuse current_parameters value to use for writing to file without copying the parameters
         fitnesses = [r['best_fitness'] for r in results]
-        current_parameters["mean_fitness"] = np.mean(fitnesses)[0],
-        current_parameters["std_fitness"] = np.std(fitnesses)[0],
-        current_parameters["best_fitness"] = np.max(fitnesses)[0],
-        current_parameters["worst_fitness"] = np.min(fitnesses)[0],
+        current_parameters["total_time"] = end_time - start_time
+        current_parameters["mean_fitness"] = np.mean(fitnesses)
+        current_parameters["std_fitness"] = np.std(fitnesses)
+        current_parameters["best_fitness"] = np.max(fitnesses)
+        current_parameters["worst_fitness"] = np.min(fitnesses)
         current_parameters['runs'] = results
         with open(os.path.join(result_directory, f"results {str(current_experiment).zfill(len(str(total_experiments)))}.json"), "w") as f:
             json.dump(current_parameters, f, indent=4)
@@ -118,9 +122,6 @@ if __name__ == "__main__":
             # if we went to the last option, we exit the outer loop
             if i == len(indexes) - 1:
                 indexes = None
-
-        end_time = time.time()
-        print(f"Finished experiment {current_experiment}/{total_experiments} in {end_time - start_time} seconds")
 
 
     # random_seed = ???
