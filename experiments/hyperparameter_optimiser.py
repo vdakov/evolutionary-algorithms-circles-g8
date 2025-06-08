@@ -1,4 +1,5 @@
 import math
+import multiprocess
 import os
 import time
 import json
@@ -20,22 +21,25 @@ if __name__ == "__main__":
     # format: (name, possible value)
     options = [
         ("generations", [2000]),
-        ("n_circles", [10]),
+        ("n_circles", [15]),
         ("population_size", [10, 30, 50, 100]),
-        ("num_children", [1, 2, 4]),
+        ("num_children", [1]), # irrelevant
         ("variance_strategy", [Strategy.CMA]),
         ("constraint_handling", [ConstraintHandling.BOUNDARY_REPAIR]),
-        ("with_elitism", [True, False]),
+        ("with_elitism", [False]), # irrelevant
         ("initialization_strategy", [s for s in InitializationStrategy]),
         ("recombination_strategy", [RecombinationStrategy.NONE]),
         ("jitter", [0, 0.1]),
+        ("print_solutions", [False]),
+        ("plot_solutions", [False]),
     ]
 
-    print_solutions = False
-    plot_solutions = False
     max_evals =  1e7
     n_runs = 10 # runs per settings to be averaged
     seeds = np.random.randint(0, 1000000, size=n_runs)
+    seeds = [609552, 529194, 429445,  84287, 363599, 113265, 423712,  42939, 932637, 679017]
+    parallelize = False
+    print(f"Seeds used: {seeds}")
 
     total_experiments = math.prod([len(x[1]) for x in options])
     current_experiment = 0
@@ -53,18 +57,18 @@ if __name__ == "__main__":
         results_manager = ResultsManager(
             f"hyperparameter_optimisation_{current_experiment}", save_files=False
         )
-        results = []
-        for seed in seeds:
+
+        def do_instance(instance_seed, current_parameters, results_manager, max_evals):
             # create instance
             runner = CirclesInASquare(
                 n_circles=current_parameters['n_circles'],
                 init_strategy=InitializationStrategy.from_string(current_parameters['initialization_strategy']),
-                print_sols=print_solutions,
-                plot_sols=plot_solutions,
+                print_sols=current_parameters["print_solutions"],
+                plot_sols=current_parameters["plot_solutions"],
                 output_statistics=True,
                 init_jitter=current_parameters['jitter'],
                 results_manager=results_manager,
-                random_seed=seed,
+                random_seed=instance_seed,
                 print_header=False
             )
             best_solution = runner.run_evolution_strategies(
@@ -78,9 +82,8 @@ if __name__ == "__main__":
                 elitism=current_parameters['with_elitism'],
                 max_run_time=None,
             )
-            results.append(
-                {
-                    "seed": int(seed),
+            return {
+                    "seed": int(instance_seed),
                     "best_solution": (
                         best_solution.tolist()
                         if isinstance(best_solution, np.ndarray)
@@ -95,7 +98,14 @@ if __name__ == "__main__":
                     "generations_run": len(runner.best_total_score),
                     "progression": runner.best_total_score,
                 }
-            )
+
+        results = []
+        if parallelize:
+            with multiprocess.Pool(len(seeds)) as pool:
+                 results = pool.starmap(do_instance, [(s, current_parameters, results_manager, max_evals) for s in seeds])
+        else:
+            for seed in seeds:
+                results.append(do_instance(seed, current_parameters, results_manager, max_evals))
 
         end_time = time.time()
         print(f"Finished experiment {current_experiment}/{total_experiments} in {end_time - start_time} seconds")
