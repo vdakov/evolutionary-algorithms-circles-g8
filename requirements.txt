@@ -3,3 +3,4 @@ numpy
 scikit-learn
 PyQt5
 pandas
+multiprocess

@@ -37,7 +37,7 @@ def run_boundary_repair(individual: Individual, new_genotype):
 
 
 def run_constraint_domination(individual: Individual, new_genotype):
-    raise NotImplementedError()
+    return new_genotype
 
 
 def run_random_repair(individual: Individual, new_genotype):

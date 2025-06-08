@@ -2,12 +2,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 
+
 # Utility to create reproducible RNG
+
 
 def random_with_seed(seed):
     return np.random.default_rng(seed)
 
+
 # Initialization functions ensuring points lie within bounds
+
 
 def random_init(n_circles, bounds=(0, 1), jitter=0.05, random_state=None):
     """Uniform random initialization with small jitter"""
@@ -39,8 +43,12 @@ def grid_init(n_circles, bounds=(0, 1), jitter=0.02, random_state=None):
             cell = (bounds[1] - bounds[0]) / max(dim - 1, 1)
             dx = rng.uniform(-jitter * cell, jitter * cell)
             dy = rng.uniform(-jitter * cell, jitter * cell)
-            pts.append((np.clip(x + dx, bounds[0], bounds[1]),
-                        np.clip(y + dy, bounds[0], bounds[1])))
+            pts.append(
+                (
+                    np.clip(x + dx, bounds[0], bounds[1]),
+                    np.clip(y + dy, bounds[0], bounds[1]),
+                )
+            )
     arr = np.array(pts)
     return arr.ravel()
 
@@ -81,16 +89,16 @@ def edge_init(n_circles, bounds=(0, 1), jitter=0.2, random_state=None):
     for _ in range(n_circles):
         if rng.random() < 0.5:
             edge = rng.integers(4)
-            if edge == 0:       # left
+            if edge == 0:  # left
                 x = bounds[0] + jitter * span
                 y = rng.uniform(bounds[0], bounds[1])
-            elif edge == 1:     # right
+            elif edge == 1:  # right
                 x = bounds[1] - jitter * span
                 y = rng.uniform(bounds[0], bounds[1])
-            elif edge == 2:     # bottom
+            elif edge == 2:  # bottom
                 x = rng.uniform(bounds[0], bounds[1])
                 y = bounds[0] + jitter * span
-            else:               # top
+            else:  # top
                 x = rng.uniform(bounds[0], bounds[1])
                 y = bounds[1] - jitter * span
         else:
@@ -121,17 +129,18 @@ def spiral_init(n_circles, bounds=(0, 1), jitter=0.05, random_state=None):
     arr = np.clip(arr, bounds[0], bounds[1])
     return arr.ravel()
 
+
 # Dispatch dictionary
 init_funcs = {
-    'random': random_init,
-    'grid': grid_init,
-    'concentric': concentric_init,
-    'edge': edge_init,
-    'spiral': spiral_init
+    "random": random_init,
+    "grid": grid_init,
+    "concentric": concentric_init,
+    "edge": edge_init,
+    "spiral": spiral_init,
 }
 
 # Visualization for n=10
-if __name__ == '__main__':
+if __name__ == "__main__":
     n = 20
     bounds = (0, 1)
     seed = 42
@@ -147,9 +156,9 @@ if __name__ == '__main__':
         ax.set_title(name.capitalize())
         ax.set_xlim(bounds)
         ax.set_ylim(bounds)
-        ax.set_aspect('equal', 'box')
+        ax.set_aspect("equal", "box")
     # Hide extra subplot if exists
     if len(init_funcs) < len(axes):
-        axes[-1].axis('off')
+        axes[-1].axis("off")
     plt.tight_layout()
     plt.show()
