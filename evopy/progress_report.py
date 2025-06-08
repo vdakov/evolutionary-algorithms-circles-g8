@@ -9,6 +9,7 @@ class ProgressReport:
         best_fitness,
         avg_fitness,
         std_fitness,
+        best_genotype_so_far,
     ):
         """Initializes the report instance.
 
@@ -22,3 +23,4 @@ class ProgressReport:
         self.best_fitness = best_fitness
         self.avg_fitness = avg_fitness
         self.std_fitness = std_fitness
+        self.best_genotype_so_far = best_genotype_so_far

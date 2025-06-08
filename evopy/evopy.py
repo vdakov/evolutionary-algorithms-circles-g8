@@ -187,6 +187,7 @@ class EvoPy:
                         population_fitness[0],
                         mean,
                         std,
+                        best_ever
                     )
                 )
 
