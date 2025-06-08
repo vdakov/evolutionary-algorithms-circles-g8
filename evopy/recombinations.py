@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class RecombinationStrategy(Enum):
+class RecombinationStrategy(str, Enum):
     NONE = "none"
     WEIGHTED = "weighted"
     INTERMEDIATE = "intermediate"

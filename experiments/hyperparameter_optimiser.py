@@ -1,3 +1,8 @@
+import math
+import os
+import time
+import json
+from datetime import datetime
 from evopy import Strategy, ConstraintHandling, InitializationStrategy, ResultsManager
 from evopy.recombinations import RecombinationStrategy
 from experiments import run_comparison
@@ -6,8 +11,16 @@ import numpy as np
 
 # Performs a gridsearch over most hyperparameters
 if __name__ == "__main__":
+
+    result_directory = os.path.join(
+        "outputs", f'{datetime.now().strftime("%Y%m%d_%H%M%S")}_hyperparameter_optimiser'
+    )
+    os.makedirs(result_directory, exist_ok=True)
+
     # format: (name, possible value)
     options = [
+        ("generations", [500]),
+        ("n_circles", [10]),
         ("population_size", [10, 30, 50, 100, 250]),
         ("num_children", [1, 2, 4, 8]),
         ("variance_strategy", [Strategy.CMA]),
@@ -18,42 +31,81 @@ if __name__ == "__main__":
         ("jitter", [0, 0.1, 0.25]),
     ]
 
-    generations = 500
-    n_circles = 10
     print_solutions = False
     plot_solutions = False
     max_evals =  1e7
     n_runs = 10 # runs per settings to be averaged
+    seeds = np.random.randint(0, 1000000, size=n_runs)
 
+    total_experiments = math.prod([len(x[1]) for x in options])
+    current_experiment = 0
     indexes = np.zeros((len(options)), dtype=int)
     while indexes is not None:
+        current_experiment += 1
         # select the current parameters
         current_parameters = {}
         for i in range(len(options)):
             current_parameters[options[i][0]] = options[i][1][indexes[i]]
+        print(f"Starting experiment {current_experiment}/{total_experiments}")
+        print(f"Settings: {current_parameters}")
+        start_time = time.time()
 
-        # create instance
-        runner = CirclesInASquare(
-            n_circles=n_circles,
-            init_strategy=InitializationStrategy.from_string(current_parameters['initialization_strategy']),
-            print_sols=print_solutions,
-            plot_sols=plot_solutions,
-            init_jitter=current_parameters['jitter'],
-            results_manager=ResultsManager(),
-            random_seed=None, # TODO
+        results_manager = ResultsManager(
+            f"hyperparameter_optimisation_{current_experiment}", save_files=False
         )
-        best = runner.run_evolution_strategies(
-            population_size=current_parameters['population_size'],
-            num_children=current_parameters['num_children'],
-            generations=generations,
-            strategy=Strategy.from_string(current_parameters['variance_strategy']),
-            constraint_handling=ConstraintHandling.from_string(current_parameters['constraint_handling']),
-            max_evaluations=max_evals,
-            recombination_strategy=RecombinationStrategy.from_string(current_parameters['recombination_strategy']),
-            elitism=current_parameters['with_elitism'],
-            max_run_time=None,
-        )
+        results = []
+        for seed in seeds:
+            # create instance
+            runner = CirclesInASquare(
+                n_circles=current_parameters['n_circles'],
+                init_strategy=InitializationStrategy.from_string(current_parameters['initialization_strategy']),
+                print_sols=print_solutions,
+                plot_sols=plot_solutions,
+                output_statistics=True,
+                init_jitter=current_parameters['jitter'],
+                results_manager=results_manager,
+                random_seed=seed,
+                print_header=False
+            )
+            best_solution = runner.run_evolution_strategies(
+                population_size=current_parameters['population_size'],
+                num_children=current_parameters['num_children'],
+                generations=current_parameters['generations'],
+                strategy=Strategy.from_string(current_parameters['variance_strategy']),
+                constraint_handling=ConstraintHandling.from_string(current_parameters['constraint_handling']),
+                max_evaluations=max_evals,
+                recombination_strategy=RecombinationStrategy.from_string(current_parameters['recombination_strategy']),
+                elitism=current_parameters['with_elitism'],
+                max_run_time=None,
+            )
+            results.append(
+                {
+                    "seed": int(seed),
+                    "best_solution": (
+                        best_solution.tolist()
+                        if isinstance(best_solution, np.ndarray)
+                        else best_solution
+                    ),
+                    "best_fitness": (
+                        runner.best_total_score[-1]
+                        if runner.best_total_score
+                        else None
+                    ),
+                    "target_value": runner.get_target(),
+                    "generations_run": len(runner.best_total_score),
+                    "progression": runner.best_total_score,
+                }
+            )
 
+        # reuse current_parameters value to use for writing to file without copying the parameters
+        fitnesses = [r['best_fitness'] for r in results]
+        current_parameters["mean_fitness"] = np.mean(fitnesses)[0],
+        current_parameters["std_fitness"] = np.std(fitnesses)[0],
+        current_parameters["best_fitness"] = np.max(fitnesses)[0],
+        current_parameters["worst_fitness"] = np.min(fitnesses)[0],
+        current_parameters['runs'] = results
+        with open(os.path.join(result_directory, f"results {str(current_experiment).zfill(len(str(total_experiments)))}.json"), "w") as f:
+            json.dump(current_parameters, f, indent=4)
 
         # increment the indexes
         for i in range(len(indexes)):
@@ -66,6 +118,9 @@ if __name__ == "__main__":
             # if we went to the last option, we exit the outer loop
             if i == len(indexes) - 1:
                 indexes = None
+
+        end_time = time.time()
+        print(f"Finished experiment {current_experiment}/{total_experiments} in {end_time - start_time} seconds")
 
 
     # random_seed = ???

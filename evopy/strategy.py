@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class Strategy(Enum):
+class Strategy(str, Enum):
     SINGLE = "single"
     MULTIPLE = "multiple"
     FULL_VARIANCE = "full"

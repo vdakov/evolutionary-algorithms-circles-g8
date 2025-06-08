@@ -28,6 +28,7 @@ class CirclesInASquare:
         results_manager=None,
         remaining_population_factor_cma=3,
         random_seed=None,
+        print_header=True,
     ):
         self.print_sols = print_sols
         self.output_statistics = output_statistics
@@ -47,7 +48,7 @@ class CirclesInASquare:
         if self.plot_best_sol:
             self.set_up_plot()
 
-        if self.output_statistics:
+        if self.output_statistics and print_header:
             self.statistics_header()
 
     def set_up_plot(self):
@@ -90,7 +91,7 @@ class CirclesInASquare:
 
         if self.print_sols:
             output += " ({:s})".format(np.array2string(report.best_genotype))
-        print(output)
+            print(output)
 
         if self.plot_best_sol:
             # Update elbow plot

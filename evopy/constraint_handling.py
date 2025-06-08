@@ -4,7 +4,7 @@ from enum import Enum
 from evopy.individual import Individual
 
 
-class ConstraintHandling(Enum):
+class ConstraintHandling(str, Enum):
     """Enum used to distinguish different types of resolving individuals that violate the bounds constraints.
 
     These strategies are used to determine the mechanism which each individual refers to when a constraint is violated.

@@ -4,7 +4,7 @@ from evopy.utils import random_with_seed
 import math
 
 
-class InitializationStrategy(Enum):
+class InitializationStrategy(str, Enum):
     RANDOM = "random"
     GRID = "grid"
     CONCENTRIC = "concentric"
