@@ -19,28 +19,28 @@ We use the Evolution Strategy (ES) algorithm with:
 - Random (normal) initialization
 - Early stopping
 
-## Possible Improvements
+## Implemented Features
 
-1. Features
+- Boundary Repair
+- Constraint Domination
+- Initialization Schemes
+  - Random
+  - Grid
+  - Concentric
+  - Edge
+  - Spiral
+- Elitism
+- Recombination Strategies
+  - Weighted
+  - Intermediate
+  - Correlated Mutations
+- CMA
 
-   - [x] Constraint handling: boundary repair
-   - [ ] Constraint handling: constraint domination
+# Experiments
 
-   - [x] Problem-specific initialization scheme
+Our experiments can be found in the `experiments` subfolder. `experiments.py` contains a method that compares all options of a specific feature against each other, with all other options being turned off. This way we can compare the effectiveness of the feature against the baseline model. The calls to those experiments can be found in the `*_comparison.py` files.
 
-   - [x] CMA
-
-   - [x] Weighted Recombination
-   - [x] Elitism
-
-   - [x] Correlated Mutations
-
-2. Parameter Optimization
-
-   - [ ] Optimize population size
-   - [ ] Optimize recombination params
-   - [ ] Optimize mutation params
-   - [ ] Optimize others...
+We also conducted a grid search to find the best combination of parameters, found in `hyperparameter_optimiser.py`. We limit the search to only using CMA and features that work with CMA, due to the very significant improvements that CMA has over the other variance strategies, such as full covariance. This script can take very long to complete.
 
 ## Setup and Usage
 

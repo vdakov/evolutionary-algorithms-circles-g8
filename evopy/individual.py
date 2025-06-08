@@ -47,6 +47,7 @@ class Individual:
         self.strategy = strategy
         self.strategy_parameters = np.asarray(strategy_parameters)
         self.constraint_handling_func = constraint_handling_func
+        self.constraint = 0
 
         if strategy == Strategy.SINGLE and len(strategy_parameters) == 1:
             self.reproduce = self._reproduce_single_variance
