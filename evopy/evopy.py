@@ -118,7 +118,7 @@ class EvoPy:
             [ind.evaluate(self.fitness_function) for ind in population]
         )
         # Track best solution
-        best_idx = self._get_best_index(population)
+        best_idx = self._get_best_index(population, population_fitness)
         best_ever = population[best_idx].copy()
         # Main loop
         for generation in range(self.generations):
@@ -217,7 +217,20 @@ class EvoPy:
             )
         # Initialize population parameters
         population_parameters = np.asarray(
-            self.constraint_handling_func(self, self.initial_population)
+            [
+                self.constraint_handling_func(
+                    Individual(
+                        x,
+                        self.strategy,
+                        strategy_parameters,
+                        self.constraint_handling_func,
+                        bounds=self.bounds,
+                        random_seed=self.random_seed,
+                    ),
+                    x,
+                )
+                for x in self.initial_population
+            ]
         )
         return [
             Individual(
