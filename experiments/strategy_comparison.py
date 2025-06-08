@@ -3,7 +3,7 @@ from evopy.strategy import Strategy
 
 if __name__ == "__main__":
     # Run experiment
-    results, analysis = run_comparison(
+    results = run_comparison(
         "strategy",
         options=[s for s in Strategy],
         param_to_overwrite="strategy",
@@ -11,6 +11,6 @@ if __name__ == "__main__":
         n_runs=5,
         population_size=30,
         num_children=1,
-        generations=100,
+        generations=1000,
         with_elitism=False,
     )
