@@ -70,8 +70,6 @@ class CirclesInASquare:
     def statistics_header(self):
         if self.print_sols:
             print("Generation Evaluations Best-fitness (Best individual..)")
-        else:
-            print("Generation Evaluations Best-fitness")
 
     def statistics_callback(self, report: ProgressReport):
         output = "{:>10d} {:>11d} {:>12.8f} {:>12.8f} {:>12.8f}".format(
@@ -106,7 +104,13 @@ class CirclesInASquare:
             best_points = np.reshape(report.best_genotype_so_far.genotype, (-1, 2))
             self.ax.clear()
             self.ax.scatter(points[:, 0], points[:, 1], clip_on=False, color="black")
-            self.ax.scatter(best_points[:, 0], best_points[:, 1], marker="x", clip_on=False, color="red")
+            self.ax.scatter(
+                best_points[:, 0],
+                best_points[:, 1],
+                marker="x",
+                clip_on=False,
+                color="red",
+            )
             self.ax.set_xlim((0, 1))
             self.ax.set_ylim((0, 1))
             self.ax.set_title(
