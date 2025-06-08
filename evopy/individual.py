@@ -28,6 +28,7 @@ class Individual:
         age=0,
         bounds=None,
         random_seed=None,
+        violation_error=None,
     ):
         """Initialize the Individual.
 
@@ -47,6 +48,7 @@ class Individual:
         self.strategy = strategy
         self.strategy_parameters = np.asarray(strategy_parameters)
         self.constraint_handling_func = constraint_handling_func
+        self.violation_error = None
 
         if strategy == Strategy.SINGLE and len(strategy_parameters) == 1:
             self.reproduce = self._reproduce_single_variance

@@ -5,7 +5,8 @@ if __name__ == "__main__":
     # Run experiment
     results = run_comparison(
         "Constraint Handling",
-        options=[ConstraintHandling("RR"), ConstraintHandling("BR")],
+        options=[ConstraintHandling("CD"), ConstraintHandling("BR")],
+        # options=[ConstraintHandling("RR"), ConstraintHandling("BR"), ConstraintHandling("CD")],
         param_to_overwrite="constraint_handling",
         param_in_runner=True,
         n_circles=10,

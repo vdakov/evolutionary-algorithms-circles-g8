@@ -6,7 +6,7 @@ from evopy.individual import Individual
 from evopy.progress_report import ProgressReport
 from evopy.recombinations import RecombinationStrategy
 from evopy.strategy import Strategy
-from evopy.constraint_handling import run_random_repair
+from evopy.constraint_handling import run_random_repair, run_constraint_domination, ConstraintHandling
 from evopy.utils import random_with_seed
 
 
@@ -156,18 +156,29 @@ class EvoPy:
                 children.append(best_ever.copy())
             # Evaluate children
             children_fitness = np.array(
-                [child.evaluate(self.fitness_function) for child in children]
-            )
+                [child.evaluate(self.fitness_function) for child in children])
             # Selection
-            if self.maximize:
-                sorted_indices = np.argsort(children_fitness)[::-1]
+
+            violation_errors = np.array(
+                [ve if ve is not None else 0 for ve in [child.violation_error for child in children]])
+            fitness_scores = np.array([child.evaluate(self.fitness_function) for child in children])
+
+            fitness_key = -fitness_scores if self.maximize else fitness_scores
+
+            if self.constraint_handling_func == run_constraint_domination:
+                sorted_indices = np.lexsort((fitness_key, violation_errors))
             else:
-                sorted_indices = np.argsort(children_fitness)
+                sorted_indices = np.argsort(fitness_key)
+
             # Update population
             population = [children[i] for i in sorted_indices[: self.population_size]]
             population_fitness = children_fitness[
                 sorted_indices[: self.population_size]
             ]
+            if self.constraint_handling_func == run_constraint_domination:
+                pass
+                # print(fitness_scores[sorted_indices])
+
             # Update best ever
             if (self.maximize and population_fitness[0] > best_ever.fitness) or (
                 not self.maximize and population_fitness[0] < best_ever.fitness

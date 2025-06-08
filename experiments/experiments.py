@@ -36,7 +36,7 @@ def create_defaults(
         "population_size": population_size,
         "num_children": num_children,
         "generations": generations,
-        "strategy": Strategy.SINGLE,
+        "strategy": Strategy.CMA,
         "constraint_handling": ConstraintHandling.RANDOM_REPAIR,
         "max_evaluations": 1e5,
         "max_run_time": None,
