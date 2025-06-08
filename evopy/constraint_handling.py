@@ -37,8 +37,8 @@ def run_boundary_repair(individual: Individual, new_genotype):
 
 
 def run_constraint_domination(individual: Individual, new_genotype):
-    lower_violations = np.maximum(individual.bounds[0] - new_genotype, 0)
-    upper_violations = np.maximum(new_genotype - individual.bounds[1], 0)
+    lower_violations = np.maximum(individual.bounds[0] - new_genotype, 0) ** 2
+    upper_violations = np.maximum(new_genotype - individual.bounds[1], 0) ** 2
 
     total_violation = lower_violations + upper_violations
 
