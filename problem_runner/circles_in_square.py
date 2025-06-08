@@ -103,8 +103,10 @@ class CirclesInASquare:
             self.elbow_fig.canvas.flush_events()
             # Update circles plot
             points = np.reshape(report.best_genotype, (-1, 2))
+            best_points = np.reshape(report.best_genotype_so_far.genotype, (-1, 2))
             self.ax.clear()
             self.ax.scatter(points[:, 0], points[:, 1], clip_on=False, color="black")
+            self.ax.scatter(best_points[:, 0], best_points[:, 1], marker="x", clip_on=False, color="red")
             self.ax.set_xlim((0, 1))
             self.ax.set_ylim((0, 1))
             self.ax.set_title(
