@@ -19,16 +19,16 @@ if __name__ == "__main__":
 
     # format: (name, possible value)
     options = [
-        ("generations", [500]),
+        ("generations", [2000]),
         ("n_circles", [10]),
-        ("population_size", [10, 30, 50, 100, 250]),
-        ("num_children", [1, 2, 4, 8]),
+        ("population_size", [10, 30, 50, 100]),
+        ("num_children", [1, 2, 4]),
         ("variance_strategy", [Strategy.CMA]),
         ("constraint_handling", [ConstraintHandling.BOUNDARY_REPAIR]),
         ("with_elitism", [True, False]),
         ("initialization_strategy", [s for s in InitializationStrategy]),
         ("recombination_strategy", [RecombinationStrategy.NONE]),
-        ("jitter", [0, 0.1, 0.25]),
+        ("jitter", [0, 0.1]),
     ]
 
     print_solutions = False
