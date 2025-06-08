@@ -13,5 +13,5 @@ if __name__ == "__main__":
         n_runs=5,
         population_size=30,
         num_children=1,
-        generations=1000
+        generations=1000,
     )

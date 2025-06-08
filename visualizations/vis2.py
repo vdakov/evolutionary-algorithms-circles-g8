@@ -22,6 +22,6 @@ fitness_data = [final_fitness_by_strategy[init] for init in strategies]
 plt.boxplot(fitness_data, labels=strategies, showmeans=True)
 plt.ylabel("Final Best Fitness")
 plt.title("Final Fitness Distribution by Initialization Strategy (Population = 100)")
-plt.grid(axis='y')
+plt.grid(axis="y")
 plt.tight_layout()
 plt.show()

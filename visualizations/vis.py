@@ -38,12 +38,14 @@ for init_strategy, results in grouped.items():
 
     generations = np.arange(cutoff)
     plt.plot(generations, mean_prog, label=f"{init_strategy} (Mean)")
-    plt.plot(generations, best_run, linestyle='--', label=f"{init_strategy} (Best Run)")
+    plt.plot(generations, best_run, linestyle="--", label=f"{init_strategy} (Best Run)")
     plt.fill_between(generations, mean_prog - std_prog, mean_prog + std_prog, alpha=0.2)
 
 plt.xlabel("Generation")
 plt.ylabel("Best Fitness")
-plt.title("Progression by Initialization Strategy (Population = 100, First 500 Generations)")
+plt.title(
+    "Progression by Initialization Strategy (Population = 100, First 500 Generations)"
+)
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
