@@ -13,6 +13,31 @@ from evopy import (
 )
 
 
+def draw_arrows(original_points, corrected_points, ax):
+    for (x0, y0), (x1, y1) in zip(original_points, corrected_points):
+        dx = x1 - x0
+        dy = y1 - y0
+        length = np.hypot(dx, dy)
+        if length == 0:
+            continue  # skip zero-length arrows
+
+        shrink_ratio = 1  # Draw 90% of the way to the corrected point
+        dx_shrink = dx * shrink_ratio
+        dy_shrink = dy * shrink_ratio
+
+        ax.arrow(
+            x0,
+            y0,
+            dx_shrink,
+            dy_shrink,
+            head_width=0.05,
+            head_length=0.1,
+            fc="gray",
+            ec="gray",
+            alpha=0.7,
+        )
+
+
 def visualize_corrections(original_genotype, corrected_genotypes, titles):
     fig, axes = plt.subplots(1, len(corrected_genotypes), figsize=(15, 5))
 
@@ -23,36 +48,62 @@ def visualize_corrections(original_genotype, corrected_genotypes, titles):
         square = plt.Rectangle((0, 0), 1, 1, fill=False, color="black", lw=2)
         ax.add_patch(square)
         ax.set_title(titles[idx])
-        ax.scatter(
-            original_points[:, 0],
-            original_points[:, 1],
-            color="blue",
-            label="Original",
-            alpha=0.6,
-        )
-        ax.scatter(
-            corrected_points[:, 0],
-            corrected_points[:, 1],
-            color="red",
-            label="Corrected",
-            alpha=0.6,
-        )
 
-        for (x0, y0), (x1, y1) in zip(original_points, corrected_points):
-            ax.arrow(
-                x0,
-                y0,
-                x1 - x0,
-                y1 - y0,
-                head_width=0.05,
-                head_length=0.1,
-                fc="gray",
-                ec="gray",
-                alpha=0.7,
+        if idx == 2 and individual is not None:  # Third graph: visualize penalty
+            lower_violations = (
+                np.maximum(individual.bounds[0] - original_genotype, 0) ** 2
+            )
+            upper_violations = (
+                np.maximum(original_genotype - individual.bounds[1], 0) ** 2
+            )
+            total_violation = lower_violations + upper_violations
+
+            # Sum every two values to get point-wise penalty (assuming 2D points)
+            ax.scatter(
+                original_points[:, 0],
+                original_points[:, 1],
+                color="blue",
+                label="Original",
+                alpha=0.6,
+                edgecolors="black",
+                s=200,
+            )
+            point_penalties = total_violation.reshape(-1, 2).sum(axis=1)
+
+            draw_arrows(original_points, corrected_points, ax)
+            scatter = ax.scatter(
+                corrected_points[:, 0],
+                corrected_points[:, 1],
+                c=point_penalties,
+                cmap="Reds",
+                s=200,
+                edgecolors="black",
             )
 
-        ax.set_aspect("equal")
-        ax.legend()
+            fig.colorbar(scatter, ax=ax, label="Penalty")
+            ax.set_xlabel("X")
+            ax.set_ylabel("Y")
+        else:
+            ax.scatter(
+                original_points[:, 0],
+                original_points[:, 1],
+                color="blue",
+                label="Original",
+                alpha=0.6,
+                edgecolors="black",
+                s=200,
+            )
+            draw_arrows(original_points, corrected_points, ax)
+            ax.scatter(
+                corrected_points[:, 0],
+                corrected_points[:, 1],
+                color="red",
+                label="Corrected",
+                alpha=0.6,
+                edgecolors="black",
+                s=200,
+            )
+            ax.legend()
 
     plt.tight_layout()
     plt.show()
