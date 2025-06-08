@@ -8,7 +8,7 @@ from evopy.constraint_handling import ConstraintHandling
 from evopy.initializers import InitializationStrategy
 from evopy.results_manager import ResultsManager
 from evopy.recombinations import RecombinationStrategy
-from evopy.utils.combined_elbow import plot_combined_elbow
+from evopy.utils.plotting import plot_combined_elbow, create_combined_plot
 from problem_runner import CirclesInASquare
 
 
@@ -100,9 +100,7 @@ def run_experiments(
     return results
 
 
-def analyze_and_plot_results(
-    results, options, result_dir, title, param_to_overwrite, with_elitism=False
-):
+def analyze_and_save(results, result_dir):
     os.makedirs(result_dir, exist_ok=True)
 
     analysis = {"seeds": [r["seed"] for r in next(iter(results.values()))]}
@@ -124,6 +122,11 @@ def analyze_and_plot_results(
     with open(os.path.join(result_dir, "analysis.json"), "w") as f:
         json.dump(analysis, f, indent=4)
 
+    return analysis
+
+
+def plot_results(results, result_dir, title, param_to_overwrite):
+    target = next(iter(results.values()))[0]["target_value"]
     # Boxplot
     plt.figure(figsize=(12, 6))
     data = [[r["best_fitness"] for r in results[key]] for key in results]
@@ -144,8 +147,6 @@ def analyze_and_plot_results(
         list(results.keys()),
         os.path.join(result_dir, f"{param_to_overwrite}_progression.png"),
     )
-
-    return analysis
 
 
 def print_summary(analysis):
@@ -213,13 +214,69 @@ def run_comparison(
         with_elitism=with_elitism,
     )
 
-    analysis = analyze_and_plot_results(
+    analysis = analyze_and_save(
         results,
-        options,
+        results_manager.run_dir,
+    )
+
+    plot_results(
+        results,
         results_manager.run_dir,
         title,
         param_to_overwrite,
-        with_elitism=with_elitism,
+    )
+
+    print_summary(analysis)
+    return results
+
+
+def run_benchmark(
+    options: list | np.ndarray,
+    strategy,
+    init_strategy,
+    constraint_handling,
+    n_runs: int = 5,
+    population_size: int = 30,
+    num_children: int = 1,
+    generations: int = 1000,
+    random_seeds: np.ndarray = None,
+):
+    if random_seeds is None:
+        random_seeds = np.random.randint(0, 1000000, size=n_runs)
+
+    results_manager = ResultsManager(f"performance_benchmark", save_files=False)
+
+    circles_defaults, evolution_defaults = create_defaults(
+        0, population_size, num_children, generations, results_manager
+    )
+
+    # Update defaults
+    circles_defaults.update({"init_strategy": init_strategy})
+    evolution_defaults.update(
+        {"strategy": strategy, "constraint_handling": constraint_handling}
+    )
+
+    results = run_experiments(
+        options,
+        random_seeds,
+        "n_circles",
+        False,
+        circles_defaults,
+        evolution_defaults,
+    )
+
+    analysis = analyze_and_save(
+        results,
+        results_manager.run_dir,
+    )
+
+    # Create combined plot
+    n_circles_range = (min(options), max(options))
+    create_combined_plot(
+        results,
+        results_manager.run_dir,
+        n_circles_range,
+        generations // 100,
     )
 
     print_summary(analysis)

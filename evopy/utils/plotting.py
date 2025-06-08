@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib
 import numpy as np
+import os
 
 
 def plot_combined_elbow(results, title, options, save_path):
@@ -65,4 +66,50 @@ def plot_combined_elbow(results, title, options, save_path):
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
     plt.savefig(save_path, bbox_inches="tight")
+    plt.close()
+
+
+def create_combined_plot(results, dir, n_circles_range, line_pad):
+    plt.figure(figsize=(12, 6))
+    colors = plt.cm.viridis(
+        np.linspace(0, 1, n_circles_range[1] - n_circles_range[0] + 1)
+    )
+
+    for idx, n in enumerate(range(n_circles_range[0], n_circles_range[1] + 1)):
+        runs = results[str(n)]
+        target = runs[0]["target_value"]
+
+        progressions = [np.array(run["progression"]) for run in runs]
+        max_len = max(len(p) for p in progressions)
+
+        padded = np.array(
+            [
+                np.pad(p, (0, max_len - len(p)), constant_values=target)
+                for p in progressions
+            ]
+        )
+
+        mean_progression = np.mean(padded, axis=0)
+        generations = np.arange(max_len)
+
+        color = colors[idx]
+        plt.plot(generations, mean_progression, color=color, label=f"{n} circles")
+        plt.plot(
+            np.arange(-line_pad, max_len),
+            [target] * (max_len + line_pad),
+            color=color,
+            linestyle="--",
+            alpha=0.5,
+        )
+
+    plt.xlabel("Generation")
+    plt.ylabel("Minimum Distance Between Circles")
+    plt.title(
+        "Performance Across Different Numbers of Circles\n(Dashed Lines Show Target Values)"
+    )
+    plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
+    plt.grid(True)
+    plt.ylim(0)
+    plt.tight_layout()
+    plt.savefig(os.path.join(dir, "benchmark.png"), bbox_inches="tight")
     plt.close()
