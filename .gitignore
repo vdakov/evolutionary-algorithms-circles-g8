@@ -4,4 +4,4 @@ ES.pdf
 AMaLGam
 __pycache__
 **/outputs/**
-!outputs/.gitkeep
+experimental_results/*/results*.json
