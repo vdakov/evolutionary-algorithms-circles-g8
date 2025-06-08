@@ -6,8 +6,10 @@ from evopy.individual import Individual
 from evopy.progress_report import ProgressReport
 from evopy.recombinations import RecombinationStrategy
 from evopy.strategy import Strategy
-from evopy.constraint_handling import run_random_repair
+from evopy.constraint_handling import run_random_repair, run_constraint_domination
 from evopy.utils import random_with_seed
+
+from functools import cmp_to_key
 
 
 class EvoPy:
@@ -116,11 +118,7 @@ class EvoPy:
             [ind.evaluate(self.fitness_function) for ind in population]
         )
         # Track best solution
-        best_idx = (
-            np.argmax(population_fitness)
-            if self.maximize
-            else np.argmin(population_fitness)
-        )
+        best_idx = self._get_best_index(population)
         best_ever = population[best_idx].copy()
         # Main loop
         for generation in range(self.generations):
@@ -158,20 +156,23 @@ class EvoPy:
             children_fitness = np.array(
                 [child.evaluate(self.fitness_function) for child in children]
             )
-            # Selection
-            if self.maximize:
-                sorted_indices = np.argsort(children_fitness)[::-1]
+            # Selection using constraint domination
+            if self.constraint_handling_func == run_constraint_domination:
+                # Sort by constraint domination rules
+                sorted_indices = self._sort_by_constraint_domination(children)
             else:
-                sorted_indices = np.argsort(children_fitness)
+                # Regular selection by fitness
+                if self.maximize:
+                    sorted_indices = np.argsort(children_fitness)[::-1]
+                else:
+                    sorted_indices = np.argsort(children_fitness)
             # Update population
             population = [children[i] for i in sorted_indices[: self.population_size]]
             population_fitness = children_fitness[
                 sorted_indices[: self.population_size]
             ]
-            # Update best ever
-            if (self.maximize and population_fitness[0] > best_ever.fitness) or (
-                not self.maximize and population_fitness[0] < best_ever.fitness
-            ):
+            # Update best ever using constraint domination rules
+            if self._is_better(population[0], best_ever):
                 best_ever = population[0].copy()
 
             self.evaluations += len(children)
@@ -232,3 +233,47 @@ class EvoPy:
             )
             for parameters in population_parameters
         ]
+
+    def _sort_by_constraint_domination(self, population):
+        n = len(population)
+        indices = list(range(n))
+
+        # Custom comparison function
+        def compare(i, j):
+            sol_i, sol_j = population[i], population[j]
+            return -1 if self._is_better(sol_i, sol_j) else 1
+
+        return sorted(indices, key=cmp_to_key(compare))
+
+    def _get_best_index(self, population, population_fitness):
+        if self.constraint_handling_func == run_constraint_domination:
+            return self._sort_by_constraint_domination(population)[0]
+        else:
+            # Regular selection by fitness
+            return (
+                np.argmax(population_fitness)
+                if self.maximize
+                else np.argmin(population_fitness)
+            )
+
+    def _is_better(self, solution_a, solution_b):
+        if self.constraint_handling_func == run_constraint_domination:
+            # Rule 1: Feasible solutions preferred over infeasible
+            if solution_a.constraint == 0 and solution_b.constraint != 0:
+                return True
+            if solution_a.constraint != 0 and solution_b.constraint == 0:
+                return False
+            # Rule 2: Both feasible - compare by fitness
+            if solution_a.constraint + solution_b.constraint == 0:
+                if self.maximize:
+                    return solution_a.fitness > solution_b.fitness
+                else:
+                    return solution_a.fitness < solution_b.fitness
+            # Rule 3: Both infeasible - compare by constraint violation
+            return solution_a.constraint < solution_b.constraint
+        else:
+            # Regular comparison by fitness
+            if self.maximize:
+                return solution_a.fitness > solution_b.fitness
+            else:
+                return solution_a.fitness < solution_b.fitness
